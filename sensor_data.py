@@ -6,4 +6,4 @@ class TemperatureHolder:
     heatingReturn: float
     mainInlet: float
     mainReturn: float
-    Room:float
+    waterInlet:float

@@ -53,7 +53,7 @@ class DS18B20Reader:
                                               heatingReturn=temperatures["28-3ce1e3802805"],
                                               mainInlet=temperatures["28-3ce1d458c862"],
                                               mainReturn=temperatures["28-3ce1e380b738"],
-                                              Room=temperatures["28-3ce1e380cd60"]
+                                              waterInlet=temperatures["28-3ce1e380cd60"]
                                               )
 
         return temperatureHolder

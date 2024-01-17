@@ -41,8 +41,10 @@ class HeatingValve:
             self.bus.write_byte_data(DEVICE_ADDR, HEATING_ON_ADDR, 0xFF)
             t.sleep(1)            
             self.bus.write_byte_data(DEVICE_ADDR, HEATING_ON_ADDR, 0x00)
+            return True
         else:
             self.logger.info(f"➡️➡️➡️ Ignore turn up ⬆️⬆️⬆️ position:{self.position} > 15")        
+            return False
 
     def set_position_to_zero(self):
         self.logger.info(f"⚠️⚠️⚠️ Reset position:{self.position} ⚠️⚠️⚠️")     
@@ -58,28 +60,32 @@ class HeatingValve:
             return int(file.read())
 
     def close_to_zero(self):
-        if self.position > 0 :
+        if self.position > 5 :
             self.logger.info(f"⚠️⚠️⚠️ Start closing position:{self.position} ⚠️⚠️⚠️")     
-            while self.position > 0:
+            while self.position > 5:
                 self.position = self.position - 1
                 self.save_position()
                 self.bus.write_byte_data(DEVICE_ADDR, HEATING_DOWN_ADDR, 0xFF)
                 t.sleep(1)
                 self.bus.write_byte_data(DEVICE_ADDR, HEATING_DOWN_ADDR, 0x00)
                 t.sleep(1)
-            self.logger.info(f"⚠️⚠️⚠️ End closing  position:{self.position} ⚠️⚠️⚠️")     
+            self.logger.info(f"⚠️⚠️⚠️ End closing  position:{self.position} ⚠️⚠️⚠️")  
+            return True   
         else:
             self.logger.info(f"➡️➡️➡️ Ignore closing ....position:{self.position}")     
+            return False
 
     def turn_down(self):
-        if self.position > 6 :
+        if self.position > 5 :
             self.position = self.position - 1 
             self.save_position()
             self.logger.info(f"turn down ⬇️⬇️⬇️ position:{self.position}")
             self.bus.write_byte_data(DEVICE_ADDR, HEATING_DOWN_ADDR, 0xFF)
             t.sleep(1)
             self.bus.write_byte_data(DEVICE_ADDR, HEATING_DOWN_ADDR, 0x00)
+            return True
         else:
-            self.logger.info(f"➡️➡️➡️ Ignore turn down ⬇️⬇️⬇️ position:{self.position} < -1")        
+            self.logger.info(f"➡️➡️➡️ Ignore turn down ⬇️⬇️⬇️ position:{self.position} < -5")
+            return False    
 
 

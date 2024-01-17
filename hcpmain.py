@@ -35,12 +35,6 @@ while True:
     
     hcpLogger.info(f"MIn: {temperatures.mainInlet:.1f} MRe: {temperatures.mainReturn:.1f} HIn: {temperatures.heatingInlet:.1f} HRe: {temperatures.heatingReturn:.1f} Room:{temperatures.Room:.1f}")
 
-    if temperatures.Room > 22:
-        t.sleep(60)
-        op = "-"
-        reason = "Room temperature is higher than 22"
-        continue
-
     if temperatures.heatingInlet < 30:
         op = "up"
         reason = "Heating Inlet is lower 30, try to turn up"
@@ -78,16 +72,16 @@ while True:
         
     if op == "up":
         hcpLogger.info(reason)
-        heatingValve.turn_up()
-        t.sleep(120)
+        if heatingValve.turn_up():
+            t.sleep(120)
     elif op == "down":
         hcpLogger.info(reason)
-        heatingValve.turn_down()
-        t.sleep(60)
+        if heatingValve.turn_down():
+            t.sleep(60)
     elif op == "-":
         hcpLogger.info(reason)
-        t.sleep(60)
+        t.sleep(30)
     else:
-        t.sleep(1)
+        t.sleep(30)
     
 
