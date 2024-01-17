@@ -53,7 +53,6 @@ while True:
         op = "down"
         reason = "Main Return Temperature is too high"
 
-    
     if temperatures.heatingInlet > 50:
         op = "-"
         reason = "Heating Inlet is higher than 50 , do nothing"
@@ -62,26 +61,21 @@ while True:
         op = "down"
         reason = "Heating Inlet is higher than 60 , try to turn down..."
 
-    if temperatures.heatingInlet > 70:
-        op = "-"
-        hcpLogger.critical("Waiting for cooling down 5 minutes...")
-        t.sleep(300)
-        heatingValve.turn_up()
-        heatingValve.turn_up()
-        heatingValve.turn_up()
-        hcpLogger.critical("Waiting 15 minutes to keep water flow...")
-        t.sleep(900)
-
     deltaMain = temperatures.mainInlet - temperatures.mainReturn
-    if temperatures.mainReturn > 75 and deltaMain < 5:
+    if temperatures.mainReturn > 75 and deltaMain < 4:
         op = "-"
         hcpLogger.critical("no concumption, Closing Valve...")
-        heatingValve.turn_down()
-        heatingValve.turn_down()
-        heatingValve.turn_down()
-        heatingValve.turn_down()
-        
+        heatingValve.close_to_zero()
 
+    if temperatures.heatingInlet > 70:
+        heatingValve.set_position_to_zero()
+        op = "-"
+        hcpLogger.critical("Waiting for cooling down 10 minutes...")
+        t.sleep(600)
+        heatingValve.turn_up()
+        hcpLogger.critical("Waiting 10 minutes to keep water flow...")
+        t.sleep(300)
+        
     if op == "up":
         hcpLogger.info(reason)
         heatingValve.turn_up()
@@ -92,14 +86,8 @@ while True:
         t.sleep(60)
     elif op == "-":
         hcpLogger.info(reason)
-        t.sleep(15)
+        t.sleep(60)
     else:
-        t.sleep(15)
-        
-
-
-
-
-   
+        t.sleep(1)
     
-    t.sleep(15)
+
