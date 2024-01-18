@@ -33,7 +33,7 @@ while True:
     op = ""
     reason = ""
     
-    hcpLogger.info(f"MIn: {temperatures.mainInlet:.1f} MRe: {temperatures.mainReturn:.1f} HIn: {temperatures.heatingInlet:.1f} HRe: {temperatures.heatingReturn:.1f} Room:{temperatures.Room:.1f}")
+    hcpLogger.info(f"MIn: {temperatures.mainInlet:.1f} MRe: {temperatures.mainReturn:.1f} HIn: {temperatures.heatingInlet:.1f} HRe: {temperatures.heatingReturn:.1f} Room:{temperatures.waterInlet:.1f}")
 
     if temperatures.heatingInlet < 30:
         op = "up"
@@ -61,14 +61,14 @@ while True:
         hcpLogger.critical("no concumption, Closing Valve...")
         heatingValve.close_to_zero()
 
-    if temperatures.heatingInlet > 70:
+    if temperatures.heatingInlet > 70 and temperatures.waterInlet > 70:
         heatingValve.set_position_to_zero()
         op = "-"
         hcpLogger.critical("Waiting for cooling down 10 minutes...")
         t.sleep(600)
-        heatingValve.turn_up()
-        hcpLogger.critical("Waiting 10 minutes to keep water flow...")
-        t.sleep(300)
+        if heatingValve.turn_up():
+            t.sleep(120)
+        continue
         
     if op == "up":
         hcpLogger.info(reason)

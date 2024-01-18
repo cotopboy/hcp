@@ -47,7 +47,7 @@ class HeatingValve:
             return False
 
     def set_position_to_zero(self):
-        self.logger.info(f"⚠️⚠️⚠️ Reset position:{self.position} ⚠️⚠️⚠️")     
+        self.logger.info(f"⚠️⚠️⚠️ Reset from position:{self.position}  to 0 ⚠️⚠️⚠️")     
         self.position = 0
         self.save_position()
 
