@@ -43,7 +43,7 @@ class HeatingValve:
             self.bus.write_byte_data(DEVICE_ADDR, HEATING_ON_ADDR, 0x00)
             return True
         else:
-            self.logger.info(f"➡️➡️➡️ Ignore turn up ⬆️⬆️⬆️ position:{self.position} > 15")        
+            self.logger.info(f"➡️➡️➡️ Ignore turn up ⬆️⬆️⬆️ position:{self.position} > 20")        
             return False
 
     def set_position_to_zero(self):
@@ -85,7 +85,7 @@ class HeatingValve:
             self.bus.write_byte_data(DEVICE_ADDR, HEATING_DOWN_ADDR, 0x00)
             return True
         else:
-            self.logger.info(f"➡️➡️➡️ Ignore turn down ⬇️⬇️⬇️ position:{self.position} < -5")
+            self.logger.info(f"➡️➡️➡️ Ignore turn down ⬇️⬇️⬇️ position:{self.position} <= 5")
             return False    
 
 
