@@ -21,7 +21,7 @@ def hcp_evnet_handler(eventName):
     inEventHandling = True
     if eventName == "no_concumption":
         hcpLogger.critical("no concumption, Closing Valve...")
-        heatingValve.close_to_zero()
+        heatingValve.close_to(4)
     
     if eventName == "heat_up_water_tank":
         heatingValve.set_position_to_zero()
@@ -32,6 +32,8 @@ def hcp_evnet_handler(eventName):
 
 hcpEvent.add_listener(hcp_evnet_handler)
 
+heatingValve.turn_up()
+
 while True:
    
     settings.load()
@@ -39,7 +41,7 @@ while True:
 
     if not settings.heating_active:
         hcpLogger.info("heating control is inactive...")
-        heatingValve.close_to_zero()
+        heatingValve.close_to(0)
         t.sleep(60)
         continue
 

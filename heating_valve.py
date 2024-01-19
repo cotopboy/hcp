@@ -61,12 +61,12 @@ class HeatingValve:
     def load_position(self):
         with open('./settings/position.txt', 'r') as file:
             return int(file.read())
-
-    def close_to_zero(self):
+            
+    def close_to(self, target_position):
         with self.lock:
-            if self.position > 0 :
+            if self.position > target_position :
                 self.logger.info(f"⚠️⚠️⚠️ Start closing position:{self.position} ⚠️⚠️⚠️")     
-                while self.position > 0:
+                while self.position > target_position:
                     self.position = self.position - 1
                     self.save_position()
                     self.bus.write_byte_data(DEVICE_ADDR, HEATING_DOWN_ADDR, 0xFF)
