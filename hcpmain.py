@@ -5,9 +5,10 @@ from settings import Settings
 from app_logger import AppLogger
 import time as t
 
-sensor_reader = DS18B20Reader()
+
 appLogger = AppLogger()
 hcpLogger = appLogger.get_logger()
+sensor_reader = DS18B20Reader(logger=hcpLogger)
 heatingValve = HeatingValve(logger=hcpLogger)
 settings = Settings(logger=hcpLogger)
 
@@ -17,8 +18,6 @@ reason = ""
 while True:
     settings.load()
     temperatures = sensor_reader.get_temperatures()
-    hcpLogger.info(f"MIn: {temperatures.mainInlet:.1f} MRe: {temperatures.mainReturn:.1f} HIn: {temperatures.heatingInlet:.1f} HRe: {temperatures.heatingReturn:.1f} Room:{temperatures.waterInlet:.1f}")
-
 
     if not settings.heating_active:
         hcpLogger.info("heating control is inactive...")

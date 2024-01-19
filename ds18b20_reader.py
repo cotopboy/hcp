@@ -1,19 +1,28 @@
 import os
 import glob
 import time
+import threading
 from sensor_data import TemperatureHolder
 
 class DS18B20Reader:
-    def __init__(self):
+
+    temperatures = {}
+    temperatureHolder:TemperatureHolder
+    logger=()
+
+    def __init__(self,logger):
         # Initialize the 1-Wire interface
         os.system('modprobe w1-gpio')
         os.system('modprobe w1-therm')
-
+        self.logger = logger
         # Base directory for device files
         self.base_dir = '/sys/bus/w1/devices/'
 
         # Find device folders
         self.device_folders = glob.glob(self.base_dir + '28*')
+        self.read_temperature()
+        self.thread = threading.Thread(target=self.refresh_temperatures)
+        self.thread.start()
 
     def _read_temp_raw(self, device_file):
         with open(device_file, 'r') as file:
@@ -31,30 +40,28 @@ class DS18B20Reader:
             temp_string = lines[1][equals_pos+2:]
             temp_c = float(temp_string) / 1000.0
             return temp_c
-
-    def get_temperatures(self):
-        temperatures = {}
         
+    def get_temperatures(self):
+        return self.temperatureHolder
+
+    def refresh_temperatures(self):
+        while True:
+            self.read_temperature()
+            time.sleep(15)
+    
+    def read_temperature(self):
         for device_folder in self.device_folders:
-            sensor_id = device_folder.split('/')[-1]
-            temperatures[sensor_id] = self._read_temp(device_folder)
+                sensor_id = device_folder.split('/')[-1]
+                self.temperatures[sensor_id] = self._read_temp(device_folder)
+
+        self.temperatureHolder = TemperatureHolder(heatingInlet=self.temperatures["28-3ce1e380d089"], 
+                                                heatingReturn=self.temperatures["28-3ce1e3802805"],
+                                                mainInlet=self.temperatures["28-3ce1d458c862"],
+                                                mainReturn=self.temperatures["28-3ce1e380b738"],
+                                                waterInlet=self.temperatures["28-3ce1e380cd60"]
+                                                )
+        self.logger.info(f"MIn: {self.temperatureHolder.mainInlet:.1f} MRe: {self.temperatureHolder.mainReturn:.1f}  HIn: {self.temperatureHolder.heatingInlet:.1f} HRe: {self.temperatureHolder.heatingReturn:.1f}  WIn:{self.temperatureHolder.waterInlet:.1f}")
 
 
-        # for sensor, temperature in temperatures.items():
-        #     print(f"Sensor {sensor}: {temperature} °C")            
-        # Sensor 28-3ce1e3802805: 35.937 °C
-        # Sensor 28-3ce1e380cd60: 20.187 °C
-        # Sensor 28-3ce1e380d089: 38.25 °C
-        # Sensor 28-3ce1e380b738: 35.812 °C
-        # Sensor 28-3ce1d458c862: 74.25 °C
-
-
-        temperatureHolder = TemperatureHolder(heatingInlet=temperatures["28-3ce1e380d089"], 
-                                              heatingReturn=temperatures["28-3ce1e3802805"],
-                                              mainInlet=temperatures["28-3ce1d458c862"],
-                                              mainReturn=temperatures["28-3ce1e380b738"],
-                                              waterInlet=temperatures["28-3ce1e380cd60"]
-                                              )
-
-        return temperatureHolder
+        
 
