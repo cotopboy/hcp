@@ -47,7 +47,7 @@ class DS18B20Reader:
     def refresh_temperatures(self):
         while True:
             self.read_temperature()
-            time.sleep(15)
+            time.sleep(10)
     
     def read_temperature(self):
         for device_folder in self.device_folders:

@@ -3,19 +3,37 @@ from ds18b20_reader import DS18B20Reader
 from heating_valve import HeatingValve
 from settings import Settings
 from app_logger import AppLogger
+from event_monitor import *
 import time as t
 
-
 appLogger = AppLogger()
+hcpEvent = HcpEvent()
 hcpLogger = appLogger.get_logger()
 sensor_reader = DS18B20Reader(logger=hcpLogger)
 heatingValve = HeatingValve(logger=hcpLogger)
 settings = Settings(logger=hcpLogger)
+eventMonitor = EventMonitor(hcpLogger,sensor_reader,hcpEvent)
+inEventHandling = False
 
-op = ""
-reason = ""
+
+def hcp_evnet_handler(eventName):
+    global inEventHandling
+    inEventHandling = True
+    if eventName == "no_concumption":
+        hcpLogger.critical("no concumption, Closing Valve...")
+        heatingValve.close_to_zero()
+    
+    if eventName == "heat_up_water_tank":
+        heatingValve.set_position_to_zero()
+        hcpLogger.critical("Waiting for cooling down 10 minutes...")
+        t.sleep(600)
+
+    inEventHandling = False
+
+hcpEvent.add_listener(hcp_evnet_handler)
 
 while True:
+   
     settings.load()
     temperatures = sensor_reader.get_temperatures()
 
@@ -32,7 +50,6 @@ while True:
     op = ""
     reason = ""
     
-
     if temperatures.heatingInlet < 30:
         op = "up"
         reason = "Heating Inlet is lower 30, try to turn up"
@@ -45,29 +62,15 @@ while True:
         op = "down"
         reason = "Main Return Temperature is too high"
 
-    if temperatures.heatingInlet > 50:
-        op = "-"
-        reason = "Heating Inlet is higher than 50 , do nothing"
-
     if temperatures.heatingInlet > 60:
         op = "down"
         reason = "Heating Inlet is higher than 60 , try to turn down..."
 
-    deltaMain = temperatures.mainInlet - temperatures.mainReturn
-    if temperatures.mainReturn > 75 and deltaMain < 4:
-        op = "-"
-        hcpLogger.critical("no concumption, Closing Valve...")
-        heatingValve.close_to_zero()
-
-    if temperatures.heatingInlet > 70 and temperatures.waterInlet > 70:
-        heatingValve.set_position_to_zero()
-        op = "-"
-        hcpLogger.critical("Waiting for cooling down 10 minutes...")
-        t.sleep(600)
-        if heatingValve.turn_up():
-            t.sleep(120)
+    if inEventHandling:
+        hcpLogger.info("inEventHandling... wait...")
+        t.sleep(10)
         continue
-        
+
     if op == "up":
         hcpLogger.info(reason)
         if heatingValve.turn_up():
@@ -75,11 +78,11 @@ while True:
     elif op == "down":
         hcpLogger.info(reason)
         if heatingValve.turn_down():
-            t.sleep(60)
+            t.sleep(120)
     elif op == "-":
         hcpLogger.info(reason)
-        t.sleep(30)
-    else:
-        t.sleep(30)
+
+    t.sleep(15)
+       
     
 
