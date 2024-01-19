@@ -1,10 +1,19 @@
+import os
 class Settings:
     
     def __init__(self,logger):
         self.logger = logger
         self.target_temperature = None
+        self.heating_active = True
+        self.load()
+    
+    def load(self):
+        self.read_heating_active()
         self.read_and_parse_file()
 
+    def read_heating_active(self):
+        self.heating_active = os.path.exists("./settings/heating_active.txt")
+          
     def read_and_parse_file(self):
         try:
             with open("./settings/target_temperature.txt", 'r') as file:

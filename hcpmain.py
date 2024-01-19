@@ -1,18 +1,13 @@
-# another_script.py
+
 from ds18b20_reader import DS18B20Reader
 from heating_valve import HeatingValve
 from settings import Settings
 from app_logger import AppLogger
 import time as t
 
-
-IS_HEATING_ON = True
-
-
 sensor_reader = DS18B20Reader()
 appLogger = AppLogger()
 hcpLogger = appLogger.get_logger()
-
 heatingValve = HeatingValve(logger=hcpLogger)
 settings = Settings(logger=hcpLogger)
 
@@ -20,20 +15,24 @@ op = ""
 reason = ""
 
 while True:
-    if not IS_HEATING_ON:
-        break
+    settings.load()
+    temperatures = sensor_reader.get_temperatures()
+    hcpLogger.info(f"MIn: {temperatures.mainInlet:.1f} MRe: {temperatures.mainReturn:.1f} HIn: {temperatures.heatingInlet:.1f} HRe: {temperatures.heatingReturn:.1f} Room:{temperatures.waterInlet:.1f}")
 
-    settings.read_and_parse_file()
+
+    if not settings.heating_active:
+        hcpLogger.info("heating control is inactive...")
+        heatingValve.close_to_zero()
+        t.sleep(60)
+        continue
+
     TARGET_TEMPERATURE = settings.target_temperature
     TARGET_TEMPERATURE_LOWER_LIMII = TARGET_TEMPERATURE - 2 
     TARGET_TEMPERATURE_UPPER_LIMII = TARGET_TEMPERATURE + 3
 
-    temperatures = sensor_reader.get_temperatures()
-
     op = ""
     reason = ""
     
-    hcpLogger.info(f"MIn: {temperatures.mainInlet:.1f} MRe: {temperatures.mainReturn:.1f} HIn: {temperatures.heatingInlet:.1f} HRe: {temperatures.heatingReturn:.1f} Room:{temperatures.waterInlet:.1f}")
 
     if temperatures.heatingInlet < 30:
         op = "up"

@@ -1,4 +1,5 @@
 import logging
+from logging.handlers import RotatingFileHandler
 
 class AppLogger:
     def __init__(self, name="hcp", log_file="hcp.log"):
@@ -6,7 +7,8 @@ class AppLogger:
         self.logger.setLevel(logging.INFO)
 
         # Create handlers
-        file_handler = logging.FileHandler(log_file)
+        file_handler = RotatingFileHandler(log_file, maxBytes=1024*1024*5, backupCount=5) # 5 MB limit
+
         stream_handler = logging.StreamHandler()
 
         # Create formatters and add it to handlers

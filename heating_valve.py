@@ -60,9 +60,9 @@ class HeatingValve:
             return int(file.read())
 
     def close_to_zero(self):
-        if self.position > 5 :
+        if self.position > 0 :
             self.logger.info(f"⚠️⚠️⚠️ Start closing position:{self.position} ⚠️⚠️⚠️")     
-            while self.position > 5:
+            while self.position > 0:
                 self.position = self.position - 1
                 self.save_position()
                 self.bus.write_byte_data(DEVICE_ADDR, HEATING_DOWN_ADDR, 0xFF)
