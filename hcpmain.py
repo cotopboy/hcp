@@ -14,19 +14,28 @@ heatingValve = HeatingValve(logger=hcpLogger)
 settings = Settings(logger=hcpLogger)
 eventMonitor = EventMonitor(hcpLogger,sensor_reader,hcpEvent)
 inEventHandling = False
+inHeatupWaterTank=False
 
 
 def hcp_evnet_handler(eventName):
     global inEventHandling
+    global inHeatupWaterTank
+
     inEventHandling = True
     if eventName == "no_concumption":
         hcpLogger.critical("no concumption, Closing Valve...")
+        inHeatupWaterTank = False
         heatingValve.close_to(4)
+
+    if eventName == "heating_too_hot":
+        heatingValve.set_position_to(0)
+        inHeatupWaterTank = False
+        t.sleep(600)
     
     if eventName == "heat_up_water_tank":
-        heatingValve.set_position_to_zero()
-        hcpLogger.critical("Waiting for cooling down 10 minutes...")
-        t.sleep(600)
+        inHeatupWaterTank = True
+        heatingValve.set_position_to(51)
+    
 
     inEventHandling = False
 
@@ -43,6 +52,11 @@ while True:
         hcpLogger.info("heating control is inactive...")
         heatingValve.close_to(0)
         t.sleep(60)
+        continue
+
+    if inHeatupWaterTank:
+        hcpLogger.info("heating up water.....")
+        t.sleep(10)
         continue
 
     TARGET_TEMPERATURE = settings.target_temperature
@@ -80,7 +94,7 @@ while True:
     elif op == "down":
         hcpLogger.info(reason)
         if heatingValve.turn_down():
-            t.sleep(120)
+            t.sleep(60)
     elif op == "-":
         hcpLogger.info(reason)
 

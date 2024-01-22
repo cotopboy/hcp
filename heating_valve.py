@@ -32,8 +32,8 @@ class HeatingValve:
                 self.logger.info(f"turn up ⬆️⬆️⬆️ position:{self.position}")  
                 self.bus.write_byte_data(DEVICE_ADDR, HEATING_ON_ADDR, 0xFF)
                 t.sleep(1)            
-                self.bus.write_byte_data(DEVICE_ADDR, HEATING_ON_ADDR, 0x00)
-                t.sleep(1)
+            
+            self.bus.write_byte_data(DEVICE_ADDR, HEATING_ON_ADDR, 0x00)
                 
             
             if self.position <= 20:
@@ -48,10 +48,10 @@ class HeatingValve:
                 self.logger.info(f"➡️➡️➡️ Ignore turn up ⬆️⬆️⬆️ position:{self.position} > 20")        
                 return False
 
-    def set_position_to_zero(self):
+    def set_position_to(self, new_position):
         with self.lock:
             self.logger.info(f"⚠️⚠️⚠️ Reset from position:{self.position}  to 0 ⚠️⚠️⚠️")     
-            self.position = 0
+            self.position = new_position
             self.save_position()
 
     def save_position(self):
@@ -71,8 +71,7 @@ class HeatingValve:
                     self.save_position()
                     self.bus.write_byte_data(DEVICE_ADDR, HEATING_DOWN_ADDR, 0xFF)
                     t.sleep(1)
-                    self.bus.write_byte_data(DEVICE_ADDR, HEATING_DOWN_ADDR, 0x00)
-                    t.sleep(1)
+                self.bus.write_byte_data(DEVICE_ADDR, HEATING_DOWN_ADDR, 0x00)
                 self.logger.info(f"⚠️⚠️⚠️ End closing  position:{self.position} ⚠️⚠️⚠️")  
                 return True   
             else:
