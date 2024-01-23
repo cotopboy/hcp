@@ -4,6 +4,7 @@ from heating_valve import HeatingValve
 from settings import Settings
 from app_logger import AppLogger
 from event_monitor import *
+from datetime import datetime, timedelta
 import time as t
 
 appLogger = AppLogger()
@@ -14,12 +15,17 @@ heatingValve = HeatingValve(logger=hcpLogger)
 settings = Settings(logger=hcpLogger)
 eventMonitor = EventMonitor(hcpLogger,sensor_reader,hcpEvent)
 inEventHandling = False
-inHeatupWaterTank=False
+inHeatupWaterTank = False
+inHeatingTooHot = False
+heatingTooHotTime = datetime.now() - timedelta(hours=1)
+
 
 
 def hcp_evnet_handler(eventName):
     global inEventHandling
     global inHeatupWaterTank
+    global heatingTooHotTime
+    global inHeatingTooHot
 
     inEventHandling = True
     if eventName == "no_concumption":
@@ -27,10 +33,16 @@ def hcp_evnet_handler(eventName):
         inHeatupWaterTank = False
         heatingValve.close_to(4)
 
+    if eventName == "heating_getting_too_hot":
+        heatingValve.turn_down()
+        t.sleep(1)
+
     if eventName == "heating_too_hot":
-        heatingValve.set_position_to(0)
+        heatingValve.close_to(4)
         inHeatupWaterTank = False
-        t.sleep(600)
+
+    if eventName == "heating_ok":
+        inHeatingTooHot = False
     
     if eventName == "heat_up_water_tank":
         inHeatupWaterTank = True
@@ -52,6 +64,17 @@ while True:
         hcpLogger.info("heating control is inactive...")
         heatingValve.close_to(0)
         t.sleep(60)
+        continue
+
+    if inHeatingTooHot:
+        hcpLogger.info("heating too hot...")
+        t.sleep(15)
+        continue
+
+
+    if inHeatupWaterTank:
+        hcpLogger.info("heating up water.....")
+        t.sleep(10)
         continue
 
     if inHeatupWaterTank:
@@ -78,9 +101,6 @@ while True:
         op = "down"
         reason = "Main Return Temperature is too high"
 
-    if temperatures.heatingInlet > 60:
-        op = "down"
-        reason = "Heating Inlet is higher than 60 , try to turn down..."
 
     if inEventHandling:
         hcpLogger.info("inEventHandling... wait...")
