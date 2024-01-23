@@ -68,7 +68,7 @@ class EventMonitor:
                 self.isInHeatUpWaterMode = False
                 self.hcp_event.trigger("no_concumption")
 
-            if t.heatingInlet > 60 and self.is_heating_inlet_increasing():
+            if t.heatingInlet > 58 and self.is_heating_inlet_increasing():
                 self.logger.info ("heating > 60 and keep increasing....")
                 self.hcp_event.trigger("heating_getting_too_hot")
 
@@ -78,7 +78,7 @@ class EventMonitor:
                     self.hcp_event.trigger("heat_up_water_tank")
                     self.isInHeatUpWaterMode = True
 
-            if t.heatingInlet > 70 and self.is_heating_inlet_increasing():
+            if t.heatingInlet > 65 and self.is_heating_inlet_increasing():
                 self.logger.critical("Heating too hot detected...")                
                 self.hcp_event.trigger("heating_too_hot")
                 self.isInHeatUpWaterMode = False
