@@ -13,7 +13,7 @@ $ScriptDirectory = $PSScriptRoot
   /command `
     "open scp://pi:$password@192.168.1.23/ -hostkey=* " `
     "lcd `"$ScriptDirectory`"" `
-    "cd /home/pi/hcp/test" `
+    "cd /home/pi/hcp" `
     "put *.py -transfer=binary"  `
 	"put *.sh -transfer=binary"  `
     "exit"
