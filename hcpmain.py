@@ -36,9 +36,11 @@ def hcp_evnet_handler(eventName):
     if eventName == "heating_getting_too_hot":
         heatingValve.turn_down()
 
-    if eventName == "heating_too_hot":
+    if eventName == "heating_too_hot":        
+        inHeatingTooHot = True
         heatingValve.close_to(0)
         inHeatupWaterTank = False
+
 
     if eventName == "heating_ok":
         inHeatingTooHot = False
@@ -66,8 +68,8 @@ while True:
         continue
 
     if inHeatingTooHot:
-        hcpLogger.info("heating too hot...")
-        t.sleep(15)
+        hcpLogger.info("waiting...heating too hot...")
+        t.sleep(10)
         continue
 
     if inHeatupWaterTank:
