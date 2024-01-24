@@ -68,8 +68,8 @@ class EventMonitor:
                 self.isInHeatUpWaterMode = False
                 self.hcp_event.trigger("no_concumption")
 
-            if t.heatingInlet > 58 and self.is_heating_inlet_increasing():
-                self.logger.info ("heating > 60 and keep increasing....")
+            if t.heatingInlet > 55 and self.is_heating_inlet_increasing():
+                self.logger.info ("heating > 55 and keep increasing....")
                 self.hcp_event.trigger("heating_getting_too_hot")
 
             if deltaMain > 10 and t.mainInlet > 80 and t.waterInlet > 70 and self.is_water_inlet_increasing() and not self.isInHeatUpWaterMode:
