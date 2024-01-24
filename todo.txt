@@ -1,11 +1,3 @@
 
-	
-
-Siri => increase temperature
-
-Siri => decrease temperature
-
-
-detect water in temperature increase...in last five 
 
 log temperature
