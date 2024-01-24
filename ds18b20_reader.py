@@ -3,12 +3,14 @@ import glob
 import time
 import threading
 from sensor_data import TemperatureHolder
+from temperature_csv_logger import CsvTemperatureLogger
 
 class DS18B20Reader:
 
     temperatures = {}
     temperatureHolder:TemperatureHolder
     logger=()
+    csvLogger = CsvTemperatureLogger()
 
     def __init__(self,logger):
         # Initialize the 1-Wire interface
@@ -54,12 +56,23 @@ class DS18B20Reader:
                 sensor_id = device_folder.split('/')[-1]
                 self.temperatures[sensor_id] = self._read_temp(device_folder)
 
-        self.temperatureHolder = TemperatureHolder(heatingInlet=self.temperatures["28-3ce1e380d089"], 
+        
+        self.temperatureHolder = TemperatureHolder(
+                                                heatingInlet=self.temperatures["28-3ce1e380d089"], 
                                                 heatingReturn=self.temperatures["28-3ce1e3802805"],
                                                 mainInlet=self.temperatures["28-3ce1d458c862"],
                                                 mainReturn=self.temperatures["28-3ce1e380b738"],
                                                 waterInlet=self.temperatures["28-3ce1e380cd60"]
                                                 )
+        
+        self.csvLogger.log_temperature([
+                                        self.temperatureHolder.mainInlet,
+                                        self.temperatureHolder.mainReturn,
+                                        self.temperatureHolder.heatingInlet,
+                                        self.temperatureHolder.heatingReturn,
+                                        self.temperatureHolder.waterInlet
+                                       ])
+        
         self.logger.info(f"MIn: {self.temperatureHolder.mainInlet:.1f} MRe: {self.temperatureHolder.mainReturn:.1f}  HIn: {self.temperatureHolder.heatingInlet:.1f} HRe: {self.temperatureHolder.heatingReturn:.1f}  WIn:{self.temperatureHolder.waterInlet:.1f}")
 
 
