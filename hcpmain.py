@@ -77,6 +77,11 @@ while True:
         t.sleep(10)
         continue
 
+    if inEventHandling:
+        hcpLogger.info("inEventHandling... wait...")
+        t.sleep(10)
+        continue
+
     TARGET_TEMPERATURE = settings.target_temperature
     TARGET_TEMPERATURE_LOWER_LIMII = TARGET_TEMPERATURE  
     TARGET_TEMPERATURE_UPPER_LIMII = TARGET_TEMPERATURE + 10
@@ -87,20 +92,22 @@ while True:
     if temperatures.heatingInlet < 30:
         op = "up"
         reason = "Heating Inlet is lower 30, try to turn up"
+
+    if (temperatures.heatingInlet + temperatures.mainReturn) < 70:
+        op = "up"
+        reason = "Heating inlet + main.return is too low.., try to turn up."
     
     if temperatures.mainReturn < TARGET_TEMPERATURE_LOWER_LIMII :
         op = "up"
         reason = "Main Return Temperature is too low"
-       
+
+    if (temperatures.heatingInlet + temperatures.mainReturn) >= 95:
+        op = "down"
+        reason = "Heating inlet + main.return is too high.., try to turn down..."   
+    
     if temperatures.mainReturn > TARGET_TEMPERATURE_UPPER_LIMII :
         op = "down"
         reason = "Main Return Temperature is too high"
-
-
-    if inEventHandling:
-        hcpLogger.info("inEventHandling... wait...")
-        t.sleep(10)
-        continue
 
     if op == "up":
         hcpLogger.info(reason)

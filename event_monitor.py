@@ -28,6 +28,7 @@ class EventMonitor:
         self.t_reader = t_reader
         self.hcp_event = hcp_event
         self.thread = threading.Thread(target=self.check_temperature)
+        self.thread.daemon = True
         self.thread.start()
 
     def add_temperature(self, waterIn,heatingIn):

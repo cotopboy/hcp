@@ -1,8 +1,5 @@
 import time as t
-from turtle import position
 import smbus
-import sys
-import os
 import threading
 
 
