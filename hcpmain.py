@@ -18,7 +18,7 @@ inEventHandling = False
 inHeatupWaterTank = False
 inHeatingTooHot = False
 heatingTooHotTime = datetime.now() - timedelta(hours=1)
-
+isHeatingActive = settings.heating_active
 
 
 def hcp_evnet_handler(eventName):
@@ -54,18 +54,13 @@ def hcp_evnet_handler(eventName):
 
 hcpEvent.add_listener(hcp_evnet_handler)
 
-heatingValve.turn_up_to_ready_position()
+if isHeatingActive:
+    heatingValve.turn_up_to_ready_position()
 
 while True:
    
     settings.load()
     temperatures = sensor_reader.get_temperatures()
-
-    if not settings.heating_active:
-        hcpLogger.info("heating control is inactive...")
-        heatingValve.close_to(0)
-        t.sleep(60)
-        continue
 
     if inHeatingTooHot:
         hcpLogger.info("waiting...heating too hot...")
@@ -81,6 +76,16 @@ while True:
         hcpLogger.info("inEventHandling... wait...")
         t.sleep(10)
         continue
+
+    if not settings.heating_active:
+        hcpLogger.info("heating control is inactive...")
+        if isHeatingActive:
+            heatingValve.close_to(0)
+            isHeatingActive = False
+        t.sleep(60)
+        continue
+    else:
+        isHeatingActive = True
 
     TARGET_TEMPERATURE = settings.target_temperature
     TARGET_TEMPERATURE_LOWER_LIMII = TARGET_TEMPERATURE  

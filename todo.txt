@@ -1,0 +1,3 @@
+Automatically on and off at time ?
+
+get temperature ?

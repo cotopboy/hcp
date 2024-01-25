@@ -24,6 +24,7 @@ class DS18B20Reader:
         self.device_folders = glob.glob(self.base_dir + '28*')
         self.read_temperature()
         self.thread = threading.Thread(target=self.refresh_temperatures)
+        self.thread.daemon = True
         self.thread.start()
 
     def _read_temp_raw(self, device_file):
