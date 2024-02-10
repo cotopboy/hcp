@@ -86,6 +86,10 @@ class HeatingValve:
             else:
                 self.logger.info(f"➡️➡️➡️ Ignore closing ....position:{self.position}")     
                 return False
+            
+    def close_to_end(self):
+        self.close_to(-100)
+        self.set_position_to(-25)
 
     def turn_down(self):
         with self.lock:
