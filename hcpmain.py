@@ -78,7 +78,7 @@ while True:
         continue
 
     if not settings.heating_active:
-        hcpLogger.info("heating control is inactive...")
+        hcpLogger.info(f"heating control is inactive...position:{heatingValve.position}")    
         if isHeatingActive:
             heatingValve.close_to_end()
             isHeatingActive = False
