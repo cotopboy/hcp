@@ -73,7 +73,7 @@ class EventMonitor:
                 self.logger.info ("heating > 55 and keep increasing....")
                 self.hcp_event.trigger("heating_getting_too_hot")
 
-            if deltaMain > 10 and t.mainInlet > 80 and t.waterInlet > 70 and self.is_water_inlet_increasing() and not self.isInHeatUpWaterMode:
+            if deltaMain > 10 and t.mainInlet > 70 and t.waterInlet > 60 and self.is_water_inlet_increasing() and not self.isInHeatUpWaterMode:
                 self.logger.critical("Heating up water tank detected...")
                 if not self.isInHeatUpWaterMode:
                     self.hcp_event.trigger("heat_up_water_tank")
