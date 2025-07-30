@@ -4,6 +4,7 @@ from heating_valve import HeatingValve
 from settings import Settings
 from app_logger import AppLogger
 from event_monitor import *
+from temperature_mqtt_sender import TemperatureMQTTSender
 from datetime import datetime, timedelta
 import time as t
 
@@ -13,7 +14,14 @@ hcpLogger = appLogger.get_logger()
 sensor_reader = DS18B20Reader(logger=hcpLogger)
 heatingValve = HeatingValve(logger=hcpLogger)
 settings = Settings(logger=hcpLogger)
-eventMonitor = EventMonitor(hcpLogger,sensor_reader,hcpEvent)
+sender = TemperatureMQTTSender(
+        broker="homeassistant.local",     # 替换为你的 HA 地址
+        port=1883,
+        username="cotopboy",
+        password="****"
+    )
+eventMonitor = EventMonitor(hcpLogger,sensor_reader,hcpEvent,sender)
+
 inEventHandling = False
 inHeatupWaterTank = False
 inHeatingTooHot = False

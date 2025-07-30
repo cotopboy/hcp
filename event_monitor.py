@@ -3,6 +3,7 @@ import time
 import threading
 
 from ds18b20_reader import DS18B20Reader
+from temperature_mqtt_sender import TemperatureMQTTSender
 
 
 class HcpEvent:
@@ -23,10 +24,11 @@ class EventMonitor:
     heatingInletTemperatures = [100,100,100,100]
 
 
-    def __init__(self,logger,t_reader:DS18B20Reader,hcp_event:HcpEvent):
+    def __init__(self,logger,t_reader:DS18B20Reader,hcp_event:HcpEvent, sender:TemperatureMQTTSender):
         self.logger = logger
         self.t_reader = t_reader
         self.hcp_event = hcp_event
+        self.sender = sender
         self.thread = threading.Thread(target=self.check_temperature)
         self.thread.daemon = True
         self.thread.start()
@@ -69,6 +71,13 @@ class EventMonitor:
     def check_temperature(self):
         while True:
             t = self.t_reader.get_temperatures()
+            
+            self.sender.SendTemperature("mainInlet",t.mainInlet)
+            self.sender.SendTemperature("mainReturn",t.mainReturn)
+            self.sender.SendTemperature("waterInlet",t.waterInlet)
+            self.sender.SendTemperature("heatingInlet",t.heatingInlet)
+            self.sender.SendTemperature("heatingReturn",t.heatingReturn)
+
             self.add_temperature(t.waterInlet, t.heatingInlet)
 
             deltaMain = t.mainInlet - t.mainReturn
