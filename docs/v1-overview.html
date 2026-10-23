@@ -1,0 +1,613 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HCP 供暖控制</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgba(11,11,11,0.10);
+  --up: #2a78d6;
+  --up-soft: #b7d3f6;
+  --down: #e34948;
+  --down-soft: #f6c9c8;
+  --hold: #f0efec;
+  --s1: #2a78d6;
+  --s2: #eb6834;
+  --s3: #1baf7a;
+  --s4: #eda100;
+  --s5: #6250d6;
+  --good: #0ca30c;
+  --warning: #fab219;
+  --serious: #ec835a;
+  --critical: #d03b3b;
+  --code-bg: #f0efec;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --ink: #f0efec;
+    --ink-2: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255,255,255,0.10);
+    --up: #3987e5;
+    --up-soft: #1c5cab;
+    --down: #e66767;
+    --down-soft: #7a2a2a;
+    --hold: #383835;
+    --s1: #3987e5;
+    --s2: #d95926;
+    --s3: #199e70;
+    --s4: #c98500;
+    --s5: #9085e9;
+    --code-bg: #2c2c2a;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d;
+  --surface: #1a1a19;
+  --ink: #f0efec;
+  --ink-2: #c3c2b7;
+  --muted: #898781;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --border: rgba(255,255,255,0.10);
+  --up: #3987e5;
+  --up-soft: #1c5cab;
+  --down: #e66767;
+  --down-soft: #7a2a2a;
+  --hold: #383835;
+  --s1: #3987e5;
+  --s2: #d95926;
+  --s3: #199e70;
+  --s4: #c98500;
+  --s5: #9085e9;
+  --code-bg: #2c2c2a;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font: 15px/1.6 system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+main { max-width: 1040px; margin: 0 auto; padding: 32px 16px 64px; }
+h1 { font-size: 28px; margin: 0 0 4px; }
+h2 { font-size: 20px; margin: 48px 0 8px; }
+h3 { font-size: 15px; margin: 0 0 8px; }
+p { margin: 0 0 12px; color: var(--ink-2); }
+.lead { font-size: 16px; max-width: 760px; }
+code { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; color: var(--ink); }
+nav { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 16px 0 0; font-size: 13px; }
+nav a { color: var(--ink-2); text-decoration: none; border-bottom: 1px solid var(--axis); }
+nav a:hover { color: var(--ink); }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-top: 12px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-top: 24px; }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+.tile .v { font-size: 30px; font-weight: 600; line-height: 1.1; }
+.tile .k { font-size: 13px; color: var(--ink-2); margin-top: 4px; }
+svg { display: block; width: 100%; height: auto; }
+svg text { font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", sans-serif; }
+.node rect { fill: var(--surface); stroke: var(--axis); stroke-width: 1.5; }
+.node.accent rect { stroke: var(--s1); stroke-width: 2; }
+.node.hw rect { fill: var(--hold); stroke: var(--axis); stroke-dasharray: 4 3; }
+.node text { fill: var(--ink); font-size: 13px; text-anchor: middle; }
+.node .sub { fill: var(--muted); font-size: 11px; }
+.edge { stroke: var(--muted); stroke-width: 1.5; fill: none; }
+.edge.dash { stroke-dasharray: 5 4; }
+.elabel { fill: var(--ink-2); font-size: 11px; text-anchor: middle; }
+.axis-text { fill: var(--muted); font-size: 11px; }
+.grid-line { stroke: var(--grid); stroke-width: 1; }
+.base-line { stroke: var(--axis); stroke-width: 1; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--ink-2); margin: 4px 0 10px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 8px; font-size: 14px; }
+.controls input[type=range] { width: 200px; accent-color: var(--s1); }
+.controls output { font-weight: 600; min-width: 48px; }
+.chart-wrap { position: relative; }
+.tip {
+  position: absolute; pointer-events: none; opacity: 0; transition: opacity .08s;
+  background: var(--surface); color: var(--ink); border: 1px solid var(--border);
+  box-shadow: 0 4px 16px rgba(0,0,0,.12); border-radius: 8px; padding: 8px 10px; font-size: 12px; line-height: 1.5;
+  white-space: nowrap; z-index: 2;
+}
+.tip b { font-weight: 600; }
+.tip .m { color: var(--ink-2); }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+th { color: var(--ink-2); font-weight: 600; font-size: 13px; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tbl-scroll { overflow-x: auto; }
+.tbl-scroll table { min-width: 600px; }
+.badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.badge::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.sev-critical { color: var(--critical); }
+.sev-serious { color: var(--serious); }
+.sev-warning { color: var(--ink-2); }
+.sev-warning::before { background: var(--warning); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 720px) { .two { grid-template-columns: 1fr; } h1 { font-size: 24px; } }
+.note { font-size: 12px; color: var(--muted); margin-top: 8px; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>HCP 供暖控制</h1>
+<p class="lead">运行在树莓派上的 Python 程序：用 5 个 DS18B20 传感器监测一次侧、暖气回路和热水箱温度，通过 I²C 继电器步进驱动电动混水阀，把一次侧回水温度 <code>mainReturn</code> 维持在目标温度 <code>T</code> 到 <code>T+10</code> 之间，并处理热水箱加热、暖气过热、无热量消耗等工况。</p>
+<nav>
+  <a href="#system">系统组成</a><a href="#modules">模块</a><a href="#threads">线程时序</a>
+  <a href="#decision">控制决策图</a><a href="#valve">阀门位置</a><a href="#events">事件阈值</a>
+  <a href="#states">状态机</a><a href="#issues">已知问题</a>
+</nav>
+
+<div class="tiles">
+  <div class="tile"><div class="v">5</div><div class="k">DS18B20 温度传感器</div></div>
+  <div class="tile"><div class="v">3</div><div class="k">并发线程（主循环 / 读传感器 / 事件检测）</div></div>
+  <div class="tile"><div class="v">5</div><div class="k">工况事件类型</div></div>
+  <div class="tile"><div class="v">10 – 41</div><div class="k">自动调节时的阀门位置（步）</div></div>
+  <div class="tile"><div class="v">0.5 s</div><div class="k">每一步电机通电时间</div></div>
+</div>
+
+<!-- ============ 系统组成 ============ -->
+<h2 id="system">系统组成</h2>
+<p>传感器位置由字段名推断：一次侧热水经混水阀进入暖气回路，另一路给热水箱加热，最终汇入一次侧回水。树莓派读取温度，控制继电器正/反转阀门电机。</p>
+<div class="card">
+<svg viewBox="0 0 960 330" role="img" aria-label="系统组成示意图">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/></marker>
+  </defs>
+  <!-- pipes -->
+  <path class="edge" d="M90,80 H330" marker-end="url(#arr)"/>
+  <path class="edge" d="M410,80 H600" marker-end="url(#arr)"/>
+  <path class="edge" d="M680,80 H820 V230 H680" marker-end="url(#arr)"/>
+  <path class="edge" d="M600,230 H90" marker-end="url(#arr)"/>
+  <path class="edge" d="M200,80 V150 H380" marker-end="url(#arr)"/>
+  <path class="edge" d="M460,150 H520 V230" marker-end="url(#arr)"/>
+  <!-- valve -->
+  <g class="node accent"><rect x="330" y="56" width="80" height="48" rx="8"/><text x="370" y="78">混水阀</text><text class="sub" x="370" y="94">电动</text></g>
+  <g class="node"><rect x="600" y="56" width="80" height="48" rx="8"/><text x="640" y="85">暖气片</text></g>
+  <g class="node"><rect x="600" y="206" width="80" height="48" rx="8"/><text x="640" y="235">汇合</text></g>
+  <g class="node"><rect x="380" y="126" width="80" height="48" rx="8"/><text x="420" y="155">热水箱</text></g>
+  <!-- sensors -->
+  <g id="sensors"></g>
+  <text class="elabel" x="40" y="70" style="text-anchor:start">一次侧供水</text>
+  <text class="elabel" x="40" y="250" style="text-anchor:start">一次侧回水</text>
+  <!-- pi + relay -->
+  <g class="node hw"><rect x="300" y="276" width="140" height="44" rx="8"/><text x="370" y="296">树莓派</text><text class="sub" x="370" y="311">1-Wire · I²C 总线 1</text></g>
+  <g class="node hw"><rect x="480" y="276" width="150" height="44" rx="8"/><text x="555" y="296">继电器板 0x10</text><text class="sub" x="555" y="311">reg1 开大 · reg2 关小</text></g>
+  <path class="edge dash" d="M440,298 H480" marker-end="url(#arr)"/>
+  <path class="edge dash" d="M630,298 H700 V20 H370 V56" marker-end="url(#arr)"/>
+</svg>
+<div class="legend" id="sensor-legend"></div>
+</div>
+
+<!-- ============ 模块 ============ -->
+<h2 id="modules">模块与依赖</h2>
+<p><code>hcpmain.py</code> 负责组装。<code>EventMonitor</code> 读取 <code>DS18B20Reader</code> 的最新温度，通过 <code>HcpEvent</code> 回调主程序中的处理函数；阀门动作统一经过 <code>HeatingValve</code> 的锁。</p>
+<div class="card">
+<svg viewBox="0 0 960 380" role="img" aria-label="模块依赖图">
+  <g class="node accent"><rect x="380" y="20" width="200" height="54" rx="8"/><text x="480" y="44">hcpmain.py</text><text class="sub" x="480" y="62">主循环 · 事件处理</text></g>
+
+  <g class="node"><rect x="20" y="140" width="170" height="54" rx="8"/><text x="105" y="164">DS18B20Reader</text><text class="sub" x="105" y="182">线程 · 每 10 s</text></g>
+  <g class="node"><rect x="215" y="140" width="170" height="54" rx="8"/><text x="300" y="164">EventMonitor</text><text class="sub" x="300" y="182">线程 · 每 15 s</text></g>
+  <g class="node"><rect x="410" y="140" width="140" height="54" rx="8"/><text x="480" y="164">HcpEvent</text><text class="sub" x="480" y="182">观察者</text></g>
+  <g class="node"><rect x="575" y="140" width="170" height="54" rx="8"/><text x="660" y="164">HeatingValve</text><text class="sub" x="660" y="182">smbus · Lock</text></g>
+  <g class="node"><rect x="770" y="140" width="170" height="54" rx="8"/><text x="855" y="164">Settings</text><text class="sub" x="855" y="182">每轮重新读取</text></g>
+
+  <g class="node"><rect x="20" y="250" width="170" height="44" rx="8"/><text x="105" y="277">TemperatureHolder</text></g>
+  <g class="node"><rect x="20" y="314" width="170" height="44" rx="8"/><text x="105" y="341">CsvTemperatureLogger</text></g>
+  <g class="node hw"><rect x="215" y="250" width="170" height="44" rx="8"/><text x="300" y="277">/sys/bus/w1</text></g>
+  <g class="node hw"><rect x="575" y="250" width="170" height="44" rx="8"/><text x="660" y="277">I²C 继电器 0x10</text></g>
+  <g class="node hw"><rect x="575" y="314" width="170" height="44" rx="8"/><text x="660" y="341">position.txt</text></g>
+  <g class="node hw"><rect x="770" y="250" width="170" height="44" rx="8"/><text x="855" y="270">heating_active.txt</text><text class="sub" x="855" y="286">target_temperature.txt</text></g>
+  <g class="node"><rect x="410" y="250" width="140" height="44" rx="8"/><text x="480" y="270">AppLogger</text><text class="sub" x="480" y="286">hcp.log</text></g>
+  <g class="node hw"><rect x="410" y="314" width="140" height="44" rx="8"/><text x="480" y="334">MQTT 发送器</text><text class="sub" x="480" y="350">未接入</text></g>
+
+  <path class="edge" d="M420,74 L130,140" marker-end="url(#arr)"/>
+  <path class="edge" d="M450,74 L320,140" marker-end="url(#arr)"/>
+  <path class="edge" d="M480,74 V140" marker-end="url(#arr)"/>
+  <path class="edge" d="M510,74 L640,140" marker-end="url(#arr)"/>
+  <path class="edge" d="M540,74 L830,140" marker-end="url(#arr)"/>
+  <path class="edge" d="M215,167 H190" marker-end="url(#arr)"/>
+  <path class="edge" d="M385,167 H410" marker-end="url(#arr)"/>
+  <path class="edge dash" d="M550,160 C600,110 590,90 560,74" marker-end="url(#arr)"/>
+  <text class="elabel" x="612" y="104">回调</text>
+  <path class="edge" d="M105,194 V250" marker-end="url(#arr)"/>
+  <path class="edge" d="M60,194 C0,230 0,300 20,336" marker-end="url(#arr)"/>
+  <path class="edge" d="M150,194 L270,250" marker-end="url(#arr)"/>
+  <path class="edge" d="M660,194 V250" marker-end="url(#arr)"/>
+  <path class="edge" d="M720,194 C780,240 770,300 745,336" marker-end="url(#arr)"/>
+  <path class="edge" d="M855,194 V250" marker-end="url(#arr)"/>
+</svg>
+<p class="note">虚线框为硬件或文件；虚线箭头为事件回调（在 EventMonitor 线程中同步执行）。</p>
+</div>
+
+<!-- ============ 线程时序 ============ -->
+<h2 id="threads">线程时序（示例前 3 分钟）</h2>
+<p>三条线程各自按固定周期运行。主循环在阀门真正动作后会额外等待（开大 60 s、关小 30 s），让水温有时间响应。下图示例：0 s 开大一次、75 s 无动作、90 s 关小一次。</p>
+<div class="card">
+<div class="legend">
+  <span><i class="sw" style="background:var(--s3)"></i>读取传感器</span>
+  <span><i class="sw" style="background:var(--s5)"></i>事件检测</span>
+  <span><i class="sw" style="background:var(--up)"></i>主循环：开大</span>
+  <span><i class="sw" style="background:var(--down)"></i>主循环：关小</span>
+  <span><i class="sw" style="background:var(--muted)"></i>主循环：保持</span>
+</div>
+<div class="chart-wrap" id="tl-wrap"><svg id="timeline" viewBox="0 0 960 200" role="img" aria-label="线程时序图"></svg><div class="tip" id="tl-tip"></div></div>
+</div>
+
+<!-- ============ 决策图 ============ -->
+<h2 id="decision">主循环控制决策图</h2>
+<p>五条规则按顺序计算，后面的覆盖前面，所以「关小」优先。拖动滑块改变目标温度 <code>T</code>，悬停查看每个温度组合命中的规则。</p>
+<div class="card">
+<div class="controls">
+  <label for="tgt">目标温度 T</label>
+  <input type="range" id="tgt" min="35" max="65" step="1" value="50">
+  <output id="tgt-out">50 °C</output>
+</div>
+<div class="legend">
+  <span><i class="sw" style="background:var(--up)"></i>开大（turn up）</span>
+  <span><i class="sw" style="background:var(--hold);outline:1px solid var(--axis)"></i>保持不动</span>
+  <span><i class="sw" style="background:var(--down)"></i>关小（turn down）</span>
+</div>
+<div class="chart-wrap" id="dm-wrap"><svg id="decision-map" viewBox="0 0 960 520" role="img" aria-label="控制决策热力图"></svg><div class="tip" id="dm-tip"></div></div>
+<div class="tbl-scroll" style="margin-top:12px">
+<table>
+  <thead><tr><th>顺序</th><th>条件</th><th>结果</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td class="num">1</td><td><code>heatingInlet &lt; 30</code></td><td style="color:var(--up)">开大</td><td>暖气进水太冷</td></tr>
+    <tr><td class="num">2</td><td><code>heatingInlet + mainReturn &lt; 70</code></td><td style="color:var(--up)">开大</td><td>整体热量不足</td></tr>
+    <tr><td class="num">3</td><td><code>mainReturn &lt; T</code></td><td style="color:var(--up)">开大</td><td>回水低于目标</td></tr>
+    <tr><td class="num">4</td><td><code>heatingInlet + mainReturn ≥ 95</code></td><td style="color:var(--down)">关小</td><td>整体热量过剩</td></tr>
+    <tr><td class="num">5</td><td><code>mainReturn &gt; T + 10</code></td><td style="color:var(--down)">关小</td><td>回水高于上限</td></tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+<!-- ============ 阀门位置 ============ -->
+<h2 id="valve">阀门位置模型</h2>
+<p>阀门没有位置反馈，<code>position</code> 是开环脉冲计数（每步 0.5 s），保存在 <code>settings/position.txt</code>。下图标出各操作会让计数到达的位置。</p>
+<div class="card">
+<div class="chart-wrap" id="vp-wrap"><svg id="valve-scale" viewBox="0 0 960 230" role="img" aria-label="阀门位置刻度"></svg><div class="tip" id="vp-tip"></div></div>
+<div class="tbl-scroll" style="margin-top:8px">
+<table>
+  <thead><tr><th>方法</th><th>行为</th><th>是否驱动电机</th></tr></thead>
+  <tbody>
+    <tr><td><code>turn_up_to_ready_position()</code></td><td>启动时连续开大到 9</td><td>是</td></tr>
+    <tr><td><code>turn_up()</code></td><td>≤ 8 时先补到 9，再若 ≤ 40 开大 1 步（上限 41）</td><td>是</td></tr>
+    <tr><td><code>turn_down()</code></td><td>&gt; 10 时关小 1 步（下限 10）</td><td>是</td></tr>
+    <tr><td><code>close_to(n)</code></td><td>连续关小到 n</td><td>是</td></tr>
+    <tr><td><code>close_to_end()</code></td><td>关到 −100，再把计数设为 −25</td><td>是 + 重设计数</td></tr>
+    <tr><td><code>set_position_to(n)</code></td><td>只修改计数（热水箱模式设为 102，使后续 <code>close_to(0)</code> 关满 102 步）</td><td>否</td></tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+<!-- ============ 事件阈值 ============ -->
+<h2 id="events">事件触发阈值</h2>
+<p><code>EventMonitor</code> 每 15 s 检查一次，并维护最近 5 个样本的窗口。「持续上升」指窗口内每个值都严格大于前一个。下图把各事件用到的温度阈值放在同一温度轴上。</p>
+<div class="card">
+<div class="chart-wrap" id="ev-wrap"><svg id="event-thresholds" viewBox="0 0 960 300" role="img" aria-label="事件阈值图"></svg><div class="tip" id="ev-tip"></div></div>
+<div class="tbl-scroll" style="margin-top:8px">
+<table>
+  <thead><tr><th>事件</th><th>触发条件</th><th>锁存</th><th>主程序处理</th></tr></thead>
+  <tbody>
+    <tr><td><code>no_concumption</code></td><td>mainReturn &gt; 65 且 mainInlet − mainReturn &lt; 3</td><td>否</td><td>退出热水箱模式，<code>close_to(0)</code></td></tr>
+    <tr><td><code>heating_getting_too_hot</code></td><td>heatingInlet &gt; 55 且持续上升</td><td>否</td><td><code>turn_down()</code> 一步</td></tr>
+    <tr><td><code>heat_up_water_tank</code></td><td>mainInlet − mainReturn &gt; 10，mainInlet &gt; 70，waterInlet &gt; 60 且持续上升</td><td>是</td><td>进入热水箱模式，计数设为 102，主循环暂停</td></tr>
+    <tr><td><code>heating_too_hot</code></td><td>heatingInlet &gt; 65 且持续上升</td><td>是</td><td>进入过热模式，<code>close_to(0)</code>，主循环暂停</td></tr>
+    <tr><td><code>heating_ok</code></td><td>处于过热模式且 heatingInlet &lt; 45</td><td>解除</td><td>退出过热模式，恢复调节</td></tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+<!-- ============ 状态机 ============ -->
+<h2 id="states">主循环状态</h2>
+<p>在「热水箱加热」和「暖气过热」状态下，主循环每 10 s 空转一次，不做调节；停用状态每 60 s 检查一次开关文件。</p>
+<div class="card">
+<svg viewBox="0 0 960 300" role="img" aria-label="状态机">
+  <g class="node accent"><rect x="380" y="120" width="200" height="60" rx="30"/><text x="480" y="146">正常调节</text><text class="sub" x="480" y="164">每 15 s 判断 up / down</text></g>
+  <g class="node"><rect x="60" y="20" width="200" height="60" rx="30"/><text x="160" y="46">热水箱加热</text><text class="sub" x="160" y="64">计数 = 102，暂停调节</text></g>
+  <g class="node"><rect x="700" y="20" width="200" height="60" rx="30"/><text x="800" y="46">暖气过热</text><text class="sub" x="800" y="64">已 close_to(0)，暂停</text></g>
+  <g class="node"><rect x="380" y="230" width="200" height="56" rx="28"/><text x="480" y="254">停用</text><text class="sub" x="480" y="271">close_to_end，计数 −25</text></g>
+
+  <path class="edge" d="M380,135 C300,120 260,95 240,80" marker-end="url(#arr)"/>
+  <text class="elabel" x="300" y="100">heat_up_water_tank</text>
+  <path class="edge" d="M180,80 C220,170 300,170 380,160" marker-end="url(#arr)"/>
+  <text class="elabel" x="250" y="185">no_concumption</text>
+  <path class="edge" d="M580,135 C660,120 700,95 720,80" marker-end="url(#arr)"/>
+  <text class="elabel" x="655" y="100">heating_too_hot</text>
+  <path class="edge" d="M780,80 C740,170 660,170 580,160" marker-end="url(#arr)"/>
+  <text class="elabel" x="720" y="190">heating_ok（&lt; 45 °C）</text>
+  <path class="edge" d="M260,40 H700" marker-end="url(#arr)"/>
+  <text class="elabel" x="480" y="32">heating_too_hot</text>
+  <path class="edge" d="M460,180 V230" marker-end="url(#arr)"/>
+  <path class="edge" d="M500,230 V180" marker-end="url(#arr)"/>
+  <text class="elabel" x="390" y="210" style="text-anchor:end">删除 heating_active.txt</text>
+  <text class="elabel" x="570" y="210" style="text-anchor:start">恢复 heating_active.txt</text>
+</svg>
+</div>
+
+<!-- ============ 问题 ============ -->
+<h2 id="issues">已知问题与改进建议</h2>
+<p>代码审阅中发现的问题，按影响排序。详细说明见 <code>docs/ARCHITECTURE.md</code> 第 8 节。</p>
+<div class="card tbl-scroll">
+<table>
+  <thead><tr><th>影响</th><th>问题</th><th>位置</th></tr></thead>
+  <tbody>
+    <tr><td><span class="badge sev-critical">高</span></td><td>仓库中目标温度文件为空 → <code>target_temperature = None</code> → 比较时 <code>TypeError</code>，主线程退出</td><td class="num">hcpmain.py:106</td></tr>
+    <tr><td><span class="badge sev-critical">高</span></td><td>异常分支引用不存在的 <code>self.file_path</code>，文件缺失时抛 <code>AttributeError</code></td><td class="num">settings.py:27</td></tr>
+    <tr><td><span class="badge sev-critical">高</span></td><td>传感器 ID 写死、CRC 失败无限重试、读线程异常后静默退出，主循环继续使用旧温度</td><td class="num">ds18b20_reader.py</td></tr>
+    <tr><td><span class="badge sev-serious">中</span></td><td>进程在 0.5 s 脉冲中被终止时继电器可能保持通电，缺少退出清理</td><td class="num">heating_valve.py</td></tr>
+    <tr><td><span class="badge sev-serious">中</span></td><td>热水箱模式只能由另外两个事件退出，没有超时</td><td class="num">hcpmain.py:71</td></tr>
+    <tr><td><span class="badge sev-serious">中</span></td><td>开环计数会漂移；手动 shell 脚本不更新 <code>position.txt</code></td><td class="num">turnup.sh 等</td></tr>
+    <tr><td><span class="badge sev-warning">低</span></td><td><code>no_concumption</code> 不锁存，条件持续时每 15 s 打 critical 日志</td><td class="num">event_monitor.py:74</td></tr>
+    <tr><td><span class="badge sev-warning">低</span></td><td>跨线程全局标志无同步；<code>logs/</code> 需手动创建；导入即打开 SMBus，难以离线测试</td><td class="num">多处</td></tr>
+    <tr><td><span class="badge sev-warning">低</span></td><td>MQTT 发送器未接入，且不兼容 paho-mqtt 2.x 的构造方式</td><td class="num">temperature_mqtt_sender.py</td></tr>
+    <tr><td><span class="badge sev-warning">低</span></td><td>上传脚本 <code>-hostkey=*</code> 不校验主机指纹，IP / 路径写死，<code>$hostNo</code> 未使用</td><td class="num">upload_my_hcp.ps1</td></tr>
+  </tbody>
+</table>
+</div>
+
+</main>
+
+<script>
+(function () {
+  const NS = "http://www.w3.org/2000/svg";
+  const el = (tag, attrs, parent, text) => {
+    const n = document.createElementNS(NS, tag);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    if (text != null) n.textContent = text;
+    if (parent) parent.appendChild(n);
+    return n;
+  };
+
+  function tooltip(wrap, tip) {
+    return {
+      show(evt, html) {
+        tip.innerHTML = html;
+        const r = wrap.getBoundingClientRect();
+        let x = evt.clientX - r.left + 14, y = evt.clientY - r.top + 14;
+        tip.style.opacity = 1;
+        const tw = tip.offsetWidth, th = tip.offsetHeight;
+        if (x + tw > r.width) x = evt.clientX - r.left - tw - 14;
+        if (y + th > r.height) y = evt.clientY - r.top - th - 14;
+        tip.style.left = Math.max(0, x) + "px";
+        tip.style.top = Math.max(0, y) + "px";
+      },
+      hide() { tip.style.opacity = 0; }
+    };
+  }
+
+  // ---------- sensors on system diagram ----------
+  const sensors = [
+    { key: "mainInlet", name: "主进水", id: "28-3ce1d458c862", x: 140, y: 80, color: "var(--s1)" },
+    { key: "heatingInlet", name: "暖气进水", id: "28-3ce1e380d089", x: 500, y: 80, color: "var(--s2)" },
+    { key: "heatingReturn", name: "暖气回水", id: "28-3ce1e3802805", x: 820, y: 160, color: "var(--s3)" },
+    { key: "waterInlet", name: "热水进水", id: "28-3ce1e380cd60", x: 290, y: 150, color: "var(--s4)" },
+    { key: "mainReturn", name: "主回水", id: "28-3ce1e380b738", x: 300, y: 230, color: "var(--s5)" },
+  ];
+  const sg = document.getElementById("sensors");
+  const leg = document.getElementById("sensor-legend");
+  sensors.forEach((s, i) => {
+    el("circle", { cx: s.x, cy: s.y, r: 11, fill: s.color, stroke: "var(--surface)", "stroke-width": 2 }, sg);
+    el("text", { x: s.x, y: s.y + 4, "text-anchor": "middle", "font-size": 11, "font-weight": 600, fill: "#fff" }, sg, i + 1);
+    el("text", { x: s.x, y: s.y - 18, "text-anchor": "middle", class: "elabel" }, sg, s.key);
+    const sp = document.createElement("span");
+    sp.innerHTML = `<i class="sw" style="background:${s.color};border-radius:50%"></i>${i + 1} ${s.name} <code>${s.key}</code> <span style="color:var(--muted)">${s.id}</span>`;
+    leg.appendChild(sp);
+  });
+
+  // ---------- thread timeline ----------
+  (function () {
+    const svg = document.getElementById("timeline");
+    const tip = tooltip(document.getElementById("tl-wrap"), document.getElementById("tl-tip"));
+    const L = 150, R = 940, T0 = 0, T1 = 180;
+    const sx = t => L + (t - T0) / (T1 - T0) * (R - L);
+    const lanes = [
+      { name: "DS18B20Reader", y: 40 },
+      { name: "EventMonitor", y: 90 },
+      { name: "主循环", y: 140 },
+    ];
+    for (let t = 0; t <= 180; t += 15) {
+      el("line", { x1: sx(t), x2: sx(t), y1: 20, y2: 165, class: "grid-line" }, svg);
+      el("text", { x: sx(t), y: 185, class: "axis-text", "text-anchor": "middle" }, svg, t + " s");
+    }
+    lanes.forEach(l => {
+      el("text", { x: L - 12, y: l.y + 4, "text-anchor": "end", fill: "var(--ink)", "font-size": 13 }, svg, l.name);
+      el("line", { x1: L, x2: R, y1: l.y, y2: l.y, class: "base-line" }, svg);
+    });
+    const marks = [];
+    for (let t = 0; t <= 175; t += 10) marks.push({ lane: 0, t, w: 2, color: "var(--s3)", label: "读取 5 个传感器，写 CSV", next: "10 s 后再次读取" });
+    for (let t = 0; t <= 175; t += 15) marks.push({ lane: 1, t, w: 2, color: "var(--s5)", label: "检测 5 种工况", next: "15 s 后再次检测" });
+    const ml = [
+      { t: 0, op: "up", w: 75, color: "var(--up)", label: "开大 1 步（0.5 s）", next: "等待 60 s + 15 s" },
+      { t: 75, op: "hold", w: 15, color: "var(--muted)", label: "处于死区，保持", next: "等待 15 s" },
+      { t: 90, op: "down", w: 45, color: "var(--down)", label: "关小 1 步（0.5 s）", next: "等待 30 s + 15 s" },
+      { t: 135, op: "hold", w: 15, color: "var(--muted)", label: "处于死区，保持", next: "等待 15 s" },
+      { t: 150, op: "hold", w: 15, color: "var(--muted)", label: "处于死区，保持", next: "等待 15 s" },
+      { t: 165, op: "hold", w: 15, color: "var(--muted)", label: "处于死区，保持", next: "等待 15 s" },
+    ];
+    ml.forEach(m => marks.push(Object.assign({ lane: 2 }, m)));
+    marks.forEach(m => {
+      const y = lanes[m.lane].y;
+      const g = el("g", {}, svg);
+      if (m.lane === 2) {
+        el("rect", { x: sx(m.t) + 1, y: y - 10, width: Math.max(4, sx(m.t + m.w) - sx(m.t) - 2), height: 20, rx: 4, fill: m.color, opacity: 0.22 }, g);
+        el("rect", { x: sx(m.t), y: y - 10, width: 8, height: 20, rx: 3, fill: m.color }, g);
+      } else {
+        el("rect", { x: sx(m.t) - 4, y: y - 10, width: 8, height: 20, rx: 3, fill: m.color }, g);
+      }
+      const hit = el("rect", { x: sx(m.t) - 8, y: y - 16, width: m.lane === 2 ? sx(m.t + m.w) - sx(m.t) + 8 : 16, height: 32, fill: "transparent" }, g);
+      hit.addEventListener("mousemove", e => tip.show(e, `<b>${lanes[m.lane].name} · ${m.t} s</b><br>${m.label}<br><span class="m">${m.next}</span>`));
+      hit.addEventListener("mouseleave", tip.hide);
+    });
+  })();
+
+  // ---------- decision map ----------
+  function decide(hi, mr, T) {
+    let op = "hold", rule = "全部规则均未命中";
+    if (hi < 30) { op = "up"; rule = "规则 1：heatingInlet < 30"; }
+    if (hi + mr < 70) { op = "up"; rule = "规则 2：heatingInlet + mainReturn < 70"; }
+    if (mr < T) { op = "up"; rule = "规则 3：mainReturn < T"; }
+    if (hi + mr >= 95) { op = "down"; rule = "规则 4：heatingInlet + mainReturn ≥ 95"; }
+    if (mr > T + 10) { op = "down"; rule = "规则 5：mainReturn > T + 10"; }
+    return { op, rule };
+  }
+  (function () {
+    const svg = document.getElementById("decision-map");
+    const wrap = document.getElementById("dm-wrap");
+    const tip = tooltip(wrap, document.getElementById("dm-tip"));
+    const slider = document.getElementById("tgt"), out = document.getElementById("tgt-out");
+    const X0 = 20, X1 = 80, Y0 = 20, Y1 = 80;
+    const L = 80, R = 900, TOP = 20, B = 460;
+    const sx = v => L + (v - X0) / (X1 - X0) * (R - L);
+    const sy = v => B - (v - Y0) / (Y1 - Y0) * (B - TOP);
+    const clip = el("clipPath", { id: "dm-clip" }, el("defs", {}, svg));
+    el("rect", { x: L, y: TOP, width: R - L, height: B - TOP }, clip);
+    const cells = el("g", {}, svg);
+    const over = el("g", { "clip-path": "url(#dm-clip)" }, svg);
+    const fill = { up: "var(--up)", down: "var(--down)", hold: "var(--hold)" };
+    const opName = { up: "开大", down: "关小", hold: "保持" };
+    const cw = (R - L) / (X1 - X0), ch = (B - TOP) / (Y1 - Y0);
+    const rects = [];
+    for (let hi = X0; hi < X1; hi++) for (let mr = Y0; mr < Y1; mr++) {
+      rects.push({ hi: hi + 0.5, mr: mr + 0.5, n: el("rect", { x: sx(hi), y: sy(mr + 1), width: cw + 0.3, height: ch + 0.3 }, cells) });
+    }
+    for (let v = X0; v <= X1; v += 10) {
+      el("text", { x: sx(v), y: B + 20, class: "axis-text", "text-anchor": "middle" }, svg, v);
+      el("text", { x: L - 10, y: sy(v) + 4, class: "axis-text", "text-anchor": "end" }, svg, v);
+    }
+    el("text", { x: (L + R) / 2, y: B + 44, "text-anchor": "middle", fill: "var(--ink-2)", "font-size": 13 }, svg, "暖气进水 heatingInlet（°C）");
+    el("text", { x: 22, y: (TOP + B) / 2, "text-anchor": "middle", fill: "var(--ink-2)", "font-size": 13, transform: `rotate(-90 22 ${(TOP + B) / 2})` }, svg, "主回水 mainReturn（°C）");
+    el("rect", { x: L, y: TOP, width: R - L, height: B - TOP, fill: "none", stroke: "var(--axis)" }, svg);
+    const cross = el("g", { style: "pointer-events:none" }, svg);
+    const vx = el("line", { y1: TOP, y2: B, stroke: "var(--ink)", "stroke-width": 1, opacity: 0 }, cross);
+    const hy = el("line", { x1: L, x2: R, stroke: "var(--ink)", "stroke-width": 1, opacity: 0 }, cross);
+
+    function guide(x1, y1, x2, y2, label, lx, ly, anchor) {
+      el("line", { x1: sx(x1), y1: sy(y1), x2: sx(x2), y2: sy(y2), stroke: "var(--ink)", "stroke-width": 1, "stroke-dasharray": "4 3", opacity: 0.55 }, over);
+      el("text", { x: sx(lx), y: sy(ly), "font-size": 11, fill: "var(--ink)", "text-anchor": anchor || "start", "paint-order": "stroke", stroke: "var(--surface)", "stroke-width": 3 }, over, label);
+    }
+    function render() {
+      const T = +slider.value;
+      out.textContent = T + " °C";
+      rects.forEach(r => r.n.setAttribute("fill", fill[decide(r.hi, r.mr, T).op]));
+      over.innerHTML = "";
+      guide(30, Y0, 30, Y1, "HI = 30", 30.5, 78.5);
+      guide(X0, 70 - X0, 70 - Y0, Y0, "HI + MR = 70", 21, 70 - X0 - 1.5);
+      guide(95 - Y1, Y1, X1, 95 - X1, "HI + MR = 95", 67, 29.5);
+      if (T >= Y0 && T <= Y1) guide(X0, T, X1, T, "MR = T", 79.5, T + 0.6, "end");
+      if (T + 10 <= Y1) guide(X0, T + 10, X1, T + 10, "MR = T + 10", 79.5, T + 10.6, "end");
+    }
+    slider.addEventListener("input", render);
+    render();
+
+    const pt = svg.createSVGPoint();
+    svg.addEventListener("mousemove", e => {
+      pt.x = e.clientX; pt.y = e.clientY;
+      const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+      if (p.x < L || p.x > R || p.y < TOP || p.y > B) { tip.hide(); vx.setAttribute("opacity", 0); hy.setAttribute("opacity", 0); return; }
+      const hi = Math.round(X0 + (p.x - L) / (R - L) * (X1 - X0));
+      const mr = Math.round(Y0 + (B - p.y) / (B - TOP) * (Y1 - Y0));
+      vx.setAttribute("x1", p.x); vx.setAttribute("x2", p.x); vx.setAttribute("opacity", 0.35);
+      hy.setAttribute("y1", p.y); hy.setAttribute("y2", p.y); hy.setAttribute("opacity", 0.35);
+      const d = decide(hi, mr, +slider.value);
+      tip.show(e, `<b>${opName[d.op]}</b><br>heatingInlet ${hi} °C · mainReturn ${mr} °C<br><span class="m">${d.rule}</span>`);
+    });
+    svg.addEventListener("mouseleave", () => { tip.hide(); vx.setAttribute("opacity", 0); hy.setAttribute("opacity", 0); });
+  })();
+
+  // ---------- valve scale ----------
+  (function () {
+    const svg = document.getElementById("valve-scale");
+    const tip = tooltip(document.getElementById("vp-wrap"), document.getElementById("vp-tip"));
+    const V0 = -30, V1 = 110, L = 40, R = 930, Y = 120;
+    const sx = v => L + (v - V0) / (V1 - V0) * (R - L);
+    el("rect", { x: sx(10), y: Y - 14, width: sx(41) - sx(10), height: 28, rx: 4, fill: "var(--up-soft)" }, svg);
+    el("text", { x: (sx(10) + sx(41)) / 2, y: Y + 4, "text-anchor": "middle", "font-size": 12, fill: "var(--ink)" }, svg, "自动调节区 10 – 41");
+    el("line", { x1: L, x2: R, y1: Y + 18, y2: Y + 18, class: "base-line" }, svg);
+    for (let v = -20; v <= 110; v += 10) {
+      el("line", { x1: sx(v), x2: sx(v), y1: Y + 18, y2: Y + 23, class: "base-line" }, svg);
+      el("text", { x: sx(v), y: Y + 38, class: "axis-text", "text-anchor": "middle" }, svg, v);
+    }
+    const pts = [
+      { v: -25, short: "停用后计数", label: "−25", desc: "close_to_end() 关到底后重设的计数", up: true, color: "var(--down)" },
+      { v: 0, short: "关闭目标", label: "0", desc: "close_to(0)：无消耗 / 暖气过热时关闭", up: false, color: "var(--down)" },
+      { v: 9, short: "启动就绪", label: "9", desc: "启动就绪位置；turn_up() 也会先补到这里", up: true, color: "var(--up)" },
+      { v: 10, short: "调节下限", label: "10", desc: "turn_down() 下限", up: false, color: "var(--up)" },
+      { v: 41, short: "调节上限", label: "41", desc: "turn_up() 上限（≤ 40 才会再开大）", up: true, color: "var(--up)" },
+      { v: 102, short: "热水箱模式", label: "102", desc: "热水箱模式：只改计数不动电机", up: true, color: "var(--s4)" },
+    ];
+    pts.forEach(p => {
+      const x = sx(p.v), ty = p.up ? Y - 50 : Y + 70;
+      el("line", { x1: x, x2: x, y1: p.up ? Y - 36 : Y + 46, y2: p.up ? Y - 16 : Y + 22, stroke: "var(--muted)" }, svg);
+      el("circle", { cx: x, cy: Y, r: 6, fill: p.color, stroke: "var(--surface)", "stroke-width": 2 }, svg);
+      el("text", { x, y: ty, "text-anchor": "middle", "font-size": 13, "font-weight": 600, fill: "var(--ink)" }, svg, p.label);
+      el("text", { x, y: ty + (p.up ? -16 : 16), "text-anchor": "middle", "font-size": 11, fill: "var(--ink-2)" }, svg, p.short);
+      const hit = el("rect", { x: x - 18, y: Y - 80, width: 36, height: 170, fill: "transparent" }, svg);
+      hit.addEventListener("mousemove", e => tip.show(e, `<b>position = ${p.label}</b><br>${p.desc}`));
+      hit.addEventListener("mouseleave", tip.hide);
+    });
+  })();
+
+  // ---------- event thresholds ----------
+  (function () {
+    const svg = document.getElementById("event-thresholds");
+    const tip = tooltip(document.getElementById("ev-wrap"), document.getElementById("ev-tip"));
+    const L = 170, R = 930, T0 = 20, T1 = 90;
+    const sx = t => L + (t - T0) / (T1 - T0) * (R - L);
+    const rows = [
+      { name: "heatingInlet", color: "var(--s2)", ranges: [
+        { a: 55, b: 65, label: "> 55 且上升", ev: "heating_getting_too_hot → 关小 1 步" },
+        { a: 65, b: 90, label: "> 65 且上升", ev: "heating_too_hot → 关闭并暂停" },
+        { a: 20, b: 45, label: "< 45", ev: "heating_ok（仅在过热模式下）→ 恢复调节", ok: true } ] },
+      { name: "mainReturn", color: "var(--s5)", ranges: [
+        { a: 65, b: 90, label: "> 65 且温差 < 3", ev: "no_concumption → close_to(0)" } ] },
+      { name: "mainInlet", color: "var(--s1)", ranges: [
+        { a: 70, b: 90, label: "> 70 且温差 > 10", ev: "heat_up_water_tank 条件之一" } ] },
+      { name: "waterInlet", color: "var(--s4)", ranges: [
+        { a: 60, b: 90, label: "> 60 且上升", ev: "heat_up_water_tank 条件之一" } ] },
+    ];
+    for (let t = T0; t <= T1; t += 10) {
+      el("line", { x1: sx(t), x2: sx(t), y1: 20, y2: 250, class: "grid-line" }, svg);
+      el("text", { x: sx(t), y: 270, class: "axis-text", "text-anchor": "middle" }, svg, t + " °C");
+    }
+    rows.forEach((r, i) => {
+      const y = 50 + i * 56;
+      el("text", { x: L - 14, y: y + 4, "text-anchor": "end", "font-size": 13, fill: "var(--ink)" }, svg, r.name);
+      el("circle", { cx: L - 14 - r.name.length * 7.6 - 10, cy: y, r: 5, fill: r.color }, svg);
+      r.ranges.forEach(g => {
+        const x = sx(g.a), w = sx(g.b) - sx(g.a) - 2;
+        const rect = el("rect", { x: x + 1, y: y - 12, width: w, height: 24, rx: 4,
+          fill: g.ok ? "var(--hold)" : r.color, opacity: g.ok ? 1 : 0.85,
+          stroke: g.ok ? "var(--axis)" : "none", "stroke-dasharray": g.ok ? "4 3" : "" }, svg);
+        el("text", { x: x + 8, y: y + 4, "font-size": 12, fill: g.ok ? "var(--ink-2)" : "#fff", "font-weight": 600, style: "pointer-events:none" }, svg, g.label);
+        rect.addEventListener("mousemove", e => tip.show(e, `<b>${r.name} ${g.label}</b><br>${g.ev}`));
+        rect.addEventListener("mouseleave", tip.hide);
+      });
+    });
+    el("text", { x: L, y: 292, "font-size": 11, fill: "var(--muted)" }, svg, "「温差」= mainInlet − mainReturn；「上升」= 最近 5 个样本严格递增");
+  })();
+})();
+</script>
+</body>
+</html>

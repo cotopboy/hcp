@@ -1,0 +1,11 @@
+<?xml version="1.0" standalone='no'?>
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<!-- Advertises the HCP API via Bonjour so the iPhone app finds the controller automatically. -->
+<service-group>
+  <name replace-wildcards="yes">HCP on %h</name>
+  <service>
+    <type>_hcp._tcp</type>
+    <port>8080</port>
+    <txt-record>path=/api</txt-record>
+  </service>
+</service-group>
