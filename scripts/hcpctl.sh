@@ -6,6 +6,8 @@
 #   ./scripts/hcpctl.sh move +5 | -5      (manual mode, pulses)
 #   ./scripts/hcpctl.sh position 40       (manual mode, absolute)
 #   ./scripts/hcpctl.sh calibrate
+#   ./scripts/hcpctl.sh zero start|set|cancel   zero-point calibration
+#   ./scripts/hcpctl.sh zero jog +5             (during zero-point calibration)
 #   ./scripts/hcpctl.sh events
 set -euo pipefail
 URL="${HCP_URL:-http://localhost:8080}"
@@ -18,5 +20,11 @@ case "${1:-status}" in
   move) curl -sS -X POST "$URL/api/valve/move" -d "{\"steps\":${2#+}}" | pretty ;;
   position) curl -sS -X POST "$URL/api/valve/move" -d "{\"position\":$2}" | pretty ;;
   calibrate) curl -sS -X POST "$URL/api/valve/calibrate" -d '{}' | pretty ;;
-  *) sed -n '2,10p' "$0"; exit 1 ;;
+  zero)
+    case "${2:-}" in
+      start|set|cancel) curl -sS -X POST "$URL/api/valve/zero/$2" -d '{}' | pretty ;;
+      jog) curl -sS -X POST "$URL/api/valve/zero/jog" -d "{\"steps\":${3#+}}" | pretty ;;
+      *) echo "usage: $0 zero start|jog N|set|cancel" >&2; exit 1 ;;
+    esac ;;
+  *) sed -n '2,12p' "$0"; exit 1 ;;
 esac

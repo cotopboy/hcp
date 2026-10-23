@@ -8,6 +8,8 @@ struct HCPRemoteApp: App {
         WindowGroup {
             DashboardView()
                 .environment(store)
+                .preferredColorScheme(.dark)
+                .tint(Theme.accent)
         }
     }
 }

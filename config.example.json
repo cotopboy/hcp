@@ -20,17 +20,23 @@
     "register_down": 2
   },
   "valve": {
-    "_comment": "Positions in 0.5 s relay pulses, 0 = fully closed.",
+    "_comment": "Positions in 0.5 s relay pulses, relative to the zero point where water starts to flow. The zero point itself is set in the app (阀门 > 设置零点) and stored in data/state.json.",
     "full_stroke_pulses": 120,
-    "ready_position": 34,
-    "auto_min": 35,
-    "auto_max": 66,
-    "reduced_position": 25
+    "default_zero_offset": 25,
+    "ready_position": 9,
+    "auto_min": 10,
+    "auto_max": 41,
+    "reduced_position": 0
   },
   "control": {
     "default_target": 50,
     "target_min": 30,
     "target_max": 75
+  },
+  "night_saver": {
+    "_comment": "Local times. Switched on/off in the app (模式 > 夜间节能).",
+    "start": "00:30",
+    "end": "06:30"
   },
   "mqtt": {
     "enabled": false

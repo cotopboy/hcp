@@ -149,6 +149,13 @@ class _Handler(BaseHTTPRequestHandler):
         self.controller.set_target(body.get("temperature"))
         self._send(200, self.controller.status())
 
+    def put_night_saver(self, query):
+        body = self._body()
+        if body is None:
+            return
+        self.controller.set_night_saver(body.get("enabled"))
+        self._send(200, self.controller.status())
+
     def post_valve_move(self, query):
         body = self._body()
         if body is None:
@@ -162,6 +169,31 @@ class _Handler(BaseHTTPRequestHandler):
         self.controller.request_calibration()
         self._send(202, self.controller.status())
 
+    def post_zero_start(self, query):
+        if self._body() is None:
+            return
+        self.controller.start_zero_calibration()
+        self._send(202, self.controller.status())
+
+    def post_zero_jog(self, query):
+        body = self._body()
+        if body is None:
+            return
+        self.controller.zero_jog(body.get("steps"))
+        self._send(202, self.controller.status())
+
+    def post_zero_set(self, query):
+        if self._body() is None:
+            return
+        self.controller.finish_zero_calibration()
+        self._send(202, self.controller.status())
+
+    def post_zero_cancel(self, query):
+        if self._body() is None:
+            return
+        self.controller.cancel_zero_calibration()
+        self._send(202, self.controller.status())
+
 
 _ROUTES = {
     ("GET", "/api/health"): _Handler.get_health,
@@ -170,6 +202,11 @@ _ROUTES = {
     ("GET", "/api/events"): _Handler.get_events,
     ("PUT", "/api/mode"): _Handler.put_mode,
     ("PUT", "/api/target"): _Handler.put_target,
+    ("PUT", "/api/night-saver"): _Handler.put_night_saver,
     ("POST", "/api/valve/move"): _Handler.post_valve_move,
     ("POST", "/api/valve/calibrate"): _Handler.post_valve_calibrate,
+    ("POST", "/api/valve/zero/start"): _Handler.post_zero_start,
+    ("POST", "/api/valve/zero/jog"): _Handler.post_zero_jog,
+    ("POST", "/api/valve/zero/set"): _Handler.post_zero_set,
+    ("POST", "/api/valve/zero/cancel"): _Handler.post_zero_cancel,
 }

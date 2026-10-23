@@ -4,9 +4,12 @@ All tunables live here with the values the original controller used.  A JSON
 file (default: ``config.json`` next to the package, see ``config.example.json``)
 can override any subset of them; unknown keys are rejected so typos are noticed.
 
-Valve positions are counted in relay pulses (``valve.pulse_seconds`` each) with
-0 = fully closed against the end stop.  The original code used a scale where
-fully closed was -25; every position below is that old value + 25.
+Valve positions are counted in relay pulses (``valve.pulse_seconds`` each)
+relative to the zero point, where water just starts to flow.  The zero point
+lies ``zero_offset`` pulses above the mechanical end stop; it is measured with
+the zero-point calibration in the app and stored in data/state.json
+(``default_zero_offset`` is used until then).  This is the scale of the
+original controller, which treated fully closed as -25.
 """
 
 from __future__ import annotations
@@ -77,11 +80,15 @@ class ValveConfig:
     close_overtravel_pulses: int = 20
     # Pause between switching directions so both relays are never energised together.
     direction_change_pause_seconds: float = 0.5
-    ready_position: int = 34   # old 9: opened to this when auto mode starts
-    auto_min: int = 35         # old 10: auto control never closes below this
-    auto_max: int = 66         # old 41: auto control never opens above this
-    reduced_position: int = 25  # old 0: used for overheat / no consumption
+    # Pulses from the end stop to where water starts to flow, until calibrated in the app.
+    default_zero_offset: int = 25
+    ready_position: int = 9    # opened to this when auto mode starts
+    auto_min: int = 10         # auto control never closes below this
+    auto_max: int = 41         # auto control never opens above this
+    reduced_position: int = 0  # used for overheat / no consumption
     calibrate_on_startup: bool = True
+    # An unfinished zero-point calibration is cancelled after this long.
+    zero_calibration_timeout_minutes: float = 30.0
 
 
 @dataclass
@@ -114,6 +121,31 @@ class MonitorConfig:
     water_tank_main_inlet_above: float = 70.0
     water_tank_water_inlet_above: float = 60.0
     water_tank_timeout_minutes: float = 90.0
+    # Natural end, checked only after the minimum duration: the tank no longer takes heat
+    # (main inlet - main return below this), or the water inlet keeps falling by this much.
+    water_tank_min_minutes: float = 5.0
+    water_tank_end_delta_below: float = 5.0
+    water_tank_end_drop: float = 2.0
+
+
+@dataclass
+class NightSaverConfig:
+    # Heating is switched off between these local times ("HH:MM") while the night saver
+    # is enabled in the app.  A window may cross midnight (e.g. "22:00" to "06:00").
+    start: str = "00:30"
+    end: str = "06:30"
+
+
+def parse_hhmm(text: str) -> int:
+    """'06:30' -> minutes after midnight."""
+    try:
+        h, m = text.split(":")
+        h, m = int(h), int(m)
+    except (AttributeError, ValueError):
+        raise ConfigError(f"time must look like HH:MM, got {text!r}")
+    if not (0 <= h < 24 and 0 <= m < 60):
+        raise ConfigError(f"time must look like HH:MM, got {text!r}")
+    return h * 60 + m
 
 
 @dataclass
@@ -137,6 +169,7 @@ class Config:
     valve: ValveConfig = field(default_factory=ValveConfig)
     control: ControlConfig = field(default_factory=ControlConfig)
     monitor: MonitorConfig = field(default_factory=MonitorConfig)
+    night_saver: NightSaverConfig = field(default_factory=NightSaverConfig)
     mqtt: MqttConfig = field(default_factory=MqttConfig)
 
     @property
@@ -149,10 +182,13 @@ class Config:
 
     def validate(self) -> None:
         v, c = self.valve, self.control
-        if not 0 <= v.reduced_position <= v.ready_position <= v.auto_min < v.auto_max <= v.full_stroke_pulses:
+        if not 0 <= v.reduced_position <= v.ready_position <= v.auto_min < v.auto_max:
             raise ConfigError(
-                "valve positions must satisfy 0 <= reduced_position <= ready_position "
-                "<= auto_min < auto_max <= full_stroke_pulses")
+                "valve positions must satisfy 0 <= reduced_position <= ready_position <= auto_min < auto_max")
+        if not 0 <= v.default_zero_offset <= v.full_stroke_pulses - v.auto_max:
+            raise ConfigError("valve.default_zero_offset + valve.auto_max must not exceed full_stroke_pulses")
+        if v.zero_calibration_timeout_minutes <= 0:
+            raise ConfigError("valve.zero_calibration_timeout_minutes must be positive")
         if min(v.pulse_seconds, v.close_overtravel_pulses, v.direction_change_pause_seconds,
                c.wait_after_up_seconds, c.wait_after_down_seconds, c.upper_band) < 0:
             raise ConfigError("valve / control timings must not be negative")
@@ -164,6 +200,8 @@ class Config:
         missing = set(SENSOR_ROLES) - set(self.sensors.ids)
         if missing:
             raise ConfigError(f"sensors.ids is missing roles: {sorted(missing)}")
+        if parse_hhmm(self.night_saver.start) == parse_hhmm(self.night_saver.end):
+            raise ConfigError("night_saver.start and night_saver.end must differ")
         if self.monitor.trend_samples < 2:
             raise ConfigError("monitor.trend_samples must be at least 2")
 

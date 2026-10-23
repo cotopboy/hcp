@@ -1,6 +1,7 @@
 import os
 import tempfile
 import time
+from datetime import datetime, timedelta
 
 from hcp.config import SENSOR_ROLES, Config
 from hcp.controller import Controller
@@ -46,20 +47,29 @@ class FailingRelay(FakeRelay):
 
 
 class Clock:
+    """Monotonic clock for the controller; ``wall`` is the local time of day it sees."""
+
     def __init__(self):
         self.now = 1000.0
+        self.wall = datetime(2026, 1, 15, 12, 0)
 
     def __call__(self):
         return self.now
 
+    def wall_now(self):
+        return self.wall
+
     def advance(self, seconds):
         self.now += seconds
+        self.wall += timedelta(seconds=seconds)
 
 
 NORMAL = dict(mainInlet=75.0, mainReturn=55.0, heatingInlet=45.0, heatingReturn=38.0, waterInlet=45.0)
 
 
-def make_controller(mode="auto", position=40, calibrated=True, temps=None, relay=None, **cfg_overrides):
+def make_controller(mode="auto", position=15, calibrated=True, temps=None, relay=None, zero_offset=25,
+                    **cfg_overrides):
+    """``position`` is relative to the zero point, like the API."""
     tmp = tempfile.mkdtemp()
     cfg = Config(data_dir=tmp)
     cfg.valve.pulse_seconds = 0
@@ -69,11 +79,12 @@ def make_controller(mode="auto", position=40, calibrated=True, temps=None, relay
         section, name = key.split("__")
         setattr(getattr(cfg, section), name, value)
     store = StateStore(os.path.join(tmp, "state.json"), cfg.control.default_target)
-    store.update(mode=mode, valve_position=position, valve_calibrated=calibrated)
+    store.update(mode=mode, valve_position=position + zero_offset, valve_calibrated=calibrated,
+                 valve_zero_offset=zero_offset)
     relay = relay or FakeRelay()
-    valve = Valve(relay, cfg.valve, position, calibrated,
-                  persist=lambda p, c: store.update(valve_position=p, valve_calibrated=c))
+    valve = Valve(relay, cfg.valve, position + zero_offset, calibrated, zero_offset,
+                  persist=lambda p, c, o: store.update(valve_position=p, valve_calibrated=c, valve_zero_offset=o))
     sensors = FakeSensors(**(temps or NORMAL))
     clock = Clock()
-    ctl = Controller(cfg, sensors, valve, store, EventLog(), clock=clock)
+    ctl = Controller(cfg, sensors, valve, store, EventLog(), clock=clock, wall_clock=clock.wall_now)
     return ctl, sensors, clock, relay, store

@@ -49,6 +49,9 @@ struct HCPClient {
     func setTarget(_ temperature: Int) async throws -> ControllerStatus {
         try await send("PUT", "/api/target", body: ["temperature": temperature])
     }
+    func setNightSaver(_ enabled: Bool) async throws -> ControllerStatus {
+        try await send("PUT", "/api/night-saver", body: ["enabled": enabled])
+    }
     func moveValve(steps: Int) async throws -> ControllerStatus {
         try await send("POST", "/api/valve/move", body: ["steps": steps])
     }
@@ -57,6 +60,12 @@ struct HCPClient {
     }
     func calibrate() async throws -> ControllerStatus {
         try await send("POST", "/api/valve/calibrate", body: [String: Int]())
+    }
+    func zeroCalibration(_ action: String) async throws -> ControllerStatus {
+        try await send("POST", "/api/valve/zero/\(action)", body: [String: Int]())
+    }
+    func zeroJog(steps: Int) async throws -> ControllerStatus {
+        try await send("POST", "/api/valve/zero/jog", body: ["steps": steps])
     }
     func history(hours: Double, maxPoints: Int = 400) async throws -> HistoryResponse {
         try await send("GET", "/api/history?hours=\(hours)&max_points=\(maxPoints)")

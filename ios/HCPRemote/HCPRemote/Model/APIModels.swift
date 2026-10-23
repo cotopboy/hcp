@@ -42,6 +42,11 @@ struct ControllerStatus: Decodable {
     let temperatures: [String: SensorReading]
     let valve: ValveStatus
     let lastDecision: Decision?
+    let zeroCalibration: ZeroCalibration?
+    /// Set while the hot water controller has opened the valve fully to heat the tank.
+    let waterTank: WaterTank?
+    /// Optional so the app still works with a controller that predates the night saver.
+    let nightSaver: NightSaver?
     let alarms: [Alarm]
 
     func reading(_ role: SensorRole) -> SensorReading? { temperatures[role.rawValue] }
@@ -51,11 +56,13 @@ struct ControllerStatus: Decodable {
         case "idle": "已关闭"
         case "manual": "手动控制"
         case "normal": "自动调节中"
-        case "water_tank": "热水箱加热中，自动暂停"
+        case "water_tank": "热水箱加热中，阀门由热水控制器接管"
         case "no_consumption": "无热量消耗，阀门已关小"
         case "overheat": "暖气过热保护"
         case "sensor_fault": "传感器故障，阀门保持不动"
         case "relay_fault": "继电器故障"
+        case "zero_calibration": "正在设置阀门零点，控制已暂停"
+        case "night_saver": "夜间节能，暖气暂停至 \(nightSaver?.end ?? "早上")"
         default: phase
         }
     }
@@ -79,15 +86,51 @@ struct SensorReading: Decodable {
 }
 
 struct ValveStatus: Decodable {
+    /// Pulses above the zero point (where water starts to flow); negative = closed below it.
     let position: Int
+    let min: Int
     let max: Int
     let percent: Int
+    /// Pulses above the mechanical end stop.
+    let absolute: Int
+    let zeroOffset: Int
+    let fullStroke: Int
     let autoMin: Int
     let autoMax: Int
     let reduced: Int
     let manualTarget: Int?
     let moving: String?
     let calibrated: Bool
+}
+
+struct WaterTank: Decodable {
+    /// Unix time when heating was detected.
+    let startedAt: Double
+    let minMinutes: Double
+    let timeoutMinutes: Double
+
+    func minutes(at now: Date = .now) -> Int {
+        Swift.max(0, Int((now.timeIntervalSince1970 - startedAt) / 60))
+    }
+}
+
+struct NightSaver: Decodable {
+    let enabled: Bool
+    /// True inside the night window while enabled: heating is off.
+    let active: Bool
+    /// Local times, "HH:MM".
+    let start: String
+    let end: String
+}
+
+struct ZeroCalibration: Decodable {
+    /// "closing" while driving to the end stop, then "ready" for jogging.
+    let stage: String
+    /// Where the valve is now, and where it will be once queued jogs are driven (pulses above the end stop).
+    let absolute: Int
+    let target: Int
+    let maxOffset: Int
+    let maxJog: Int
 }
 
 struct Decision: Decodable {
@@ -130,7 +173,7 @@ struct Alarm: Decodable, Identifiable {
         case "relay_fault": "继电器故障"
         case "overheat": "暖气过热，阀门保持在低开度"
         case "no_consumption": "主管无热量消耗"
-        case "water_tank": "热水箱加热中，自动控制暂停"
+        case "water_tank": "热水控制器已把阀门开满，本控制器暂停"
         case "sensor_fault":
             "传感器无读数：" + (sensor.flatMap { SensorRole(rawValue: $0)?.title } ?? "?")
         case "uncalibrated": "阀门位置未校准"

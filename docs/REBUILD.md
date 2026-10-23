@@ -140,7 +140,23 @@ sudo i2cdetect -y 1
 
 **测量全行程**（更换了执行器时需要）：先 `relay_test.sh down 90` 关到底，再用秒表计时 `relay_test.sh up 90` 直到指针到全开。`full_stroke_pulses` = 秒数 × 2，写进 `config.json` 的 `valve` 部分。如果全行程与 60 秒差别很大，`ready_position`、`auto_min`、`auto_max`、`reduced_position` 也应按比例缩放（它们都是「步」）。
 
-## 7. 启动并验证
+## 7. 设置阀门零点
+
+阀门从完全关闭开始要先开过一段空行程，水才开始流。这个点是开度的 0，自动控制的范围都从这里算起。换了执行器或阀门后要重新设置（启动服务之后再做，见第 8 步）：
+
+1. App →「阀门」→「设置零点（刚有水流的位置）…」→「开始：把阀门关到底」，等约 1 分钟。
+2. 站在阀门旁，用 +5 慢慢打开，听到水声或摸到管子开始变热后改用 −1 / +1 微调。
+3. 在刚有水流的位置点「设为零点」。
+
+没设置过时默认零点是离完全关闭 25 步（v1 的值）。也可以用命令行完成：
+
+```bash
+HCP_URL=http://hcp.local:8080 ./scripts/hcpctl.sh zero start
+```
+
+之后用 `zero jog +5`、`zero jog -1` 点动，`zero set` 保存，`zero cancel` 放弃。
+
+## 8. 启动并验证
 
 ```bash
 sudo systemctl start hcp
@@ -150,7 +166,7 @@ sudo systemctl start hcp
 journalctl -u hcp -f
 ```
 
-正常启动时会看到：`HCP 2.0.0 starting` → 每 10 秒一行温度 → `closing valve fully … to calibrate` → `valve calibrated` → `valve up 34 pulse(s)`。
+正常启动时会看到：`HCP 2.0.0 starting` → 每 10 秒一行温度 → `closing valve fully … to calibrate` → `valve calibrated` → `valve up … pulse(s)`（回到当前模式的位置）。
 
 在局域网中任何电脑上：
 
@@ -158,16 +174,16 @@ journalctl -u hcp -f
 curl http://hcp.local:8080/api/status
 ```
 
-## 8. 安装 iPhone App
+## 9. 安装 iPhone App
 
 见 [ios/README.md](../ios/README.md)。App 打开后会自动在局域网中找到「HCP on hcp」。
 
-## 9. 需要备份什么
+## 10. 需要备份什么
 
 | 内容 | 位置（树莓派） | 是否重要 |
 |---|---|---|
 | 配置（传感器 ID、参数） | `~/hcp/config.json` | **重要**。改过以后复制一份到电脑，或把改动同步回 `config.example.json` 并提交到 Git |
-| 运行状态 | `~/hcp/data/state.json` | 不重要：丢失后用默认值启动并重新校准，模式和目标温度在 App 里重新设一下即可 |
+| 运行状态 | `~/hcp/data/state.json` | 含模式、目标温度和**零点**（`valve_zero_offset`）。丢失后用默认值启动并重新计数；零点需要在 App 里重新设置，或记下数值写进 `config.json` 的 `valve.default_zero_offset` |
 | 温度记录 | `~/hcp/data/logs/temperature_YYYYMMDD.csv` | 可选 |
 | 应用日志 | `~/hcp/data/logs/hcp.log`（5 MB × 5 滚动），以及 `journalctl -u hcp` | 排查问题用 |
 
@@ -177,7 +193,7 @@ curl http://hcp.local:8080/api/status
 scp pi@hcp.local:hcp/config.json ./config.backup.json
 ```
 
-## 10. 故障排查
+## 11. 故障排查
 
 | 现象 | 检查 |
 |---|---|
@@ -186,11 +202,12 @@ scp pi@hcp.local:hcp/config.json ./config.backup.json
 | 某个温度显示「无读数」 | 该探头接线 / 防水接头进水；`ls /sys/bus/w1/devices/` 是否还在；ID 是否填错 |
 | 所有温度都没有读数 | 1‑Wire 未启用（`sudo raspi-config nonint get_onewire` 应为 `0`）；上拉电阻；总线短路 |
 | 「继电器故障」 | `i2cdetect -y 1` 是否还能看到 `0x10`；继电器板供电；用户是否在 `i2c` 组（`groups pi`） |
-| 阀门位置明显不准 | App →「校准阀门…」 |
+| 阀门位置明显不准 | App →「重新计数（关到底）…」 |
+| 关闭模式下仍有水流 / 自动控制刚开就很热 | 零点不准，重新「设置零点」 |
 | 启动报 `config error` | 按提示修正 `config.json`（键名拼写、类型、位置大小关系） |
 | 服务反复重启 | `journalctl -u hcp -b` 看第一条错误 |
 
-## 11. 在电脑上试运行（不接硬件）
+## 12. 在电脑上试运行（不接硬件）
 
 ```bash
 python3 -m hcp --simulate

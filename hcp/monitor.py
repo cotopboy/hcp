@@ -51,6 +51,11 @@ class Monitor:
         w = list(self._trends[role])
         return len(w) == self.cfg.trend_samples and all(b > a for a, b in zip(w, w[1:]))
 
+    def _falling(self, role: str, min_drop: float) -> bool:
+        w = list(self._trends[role])
+        return len(w) == self.cfg.trend_samples and all(b < a for a, b in zip(w, w[1:])) \
+            and w[0] - w[-1] >= min_drop
+
     def _end_water_tank(self, reason: str, events: List[Event]) -> None:
         if self.water_tank:
             self.water_tank = False
@@ -91,8 +96,15 @@ class Monitor:
                 events.append(Event(HEATING_GETTING_HOT, f"heating inlet {hi:.1f} and rising"))
 
         if self.water_tank:
-            if now - self.water_tank_since > c.water_tank_timeout_minutes * 60:
+            elapsed = now - self.water_tank_since
+            if elapsed > c.water_tank_timeout_minutes * 60:
                 self._end_water_tank("timeout", events)
+            elif elapsed >= c.water_tank_min_minutes * 60:
+                # The tank is hot: it no longer takes heat, or the hot flow into it has stopped.
+                if delta is not None and delta < c.water_tank_end_delta_below:
+                    self._end_water_tank(f"tank hot, delta {delta:.1f}", events)
+                elif self._falling(WATER_INLET, c.water_tank_end_drop):
+                    self._end_water_tank(f"water inlet falling ({wi:.1f})", events)
         elif (delta is not None and wi is not None and not self.overheat and not self.no_consumption
               and delta > c.water_tank_delta_above and mi > c.water_tank_main_inlet_above
               and wi > c.water_tank_water_inlet_above and self._rising(WATER_INLET)):

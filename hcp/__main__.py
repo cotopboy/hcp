@@ -65,15 +65,19 @@ def main(argv=None) -> int:
     stop = threading.Event()
 
     relay = FakeRelay() if cfg.simulate else I2CRelay(cfg.relay)
-    valve = Valve(relay, cfg.valve, state.valve_position, state.valve_calibrated,
-                  persist=lambda pos, cal: store.update(valve_position=pos, valve_calibrated=cal),
+    zero_offset = state.valve_zero_offset
+    if not 0 <= zero_offset <= cfg.valve.full_stroke_pulses - cfg.valve.auto_max:
+        zero_offset = cfg.valve.default_zero_offset
+    valve = Valve(relay, cfg.valve, state.valve_position, state.valve_calibrated, zero_offset,
+                  persist=lambda pos, cal, off: store.update(valve_position=pos, valve_calibrated=cal,
+                                                             valve_zero_offset=off),
                   stop_event=stop)
     # Never start with a relay left energised by a crash.
     relay.all_off()
 
     if cfg.simulate:
         from .simulator import SimulatedPlant
-        source = SimulatedPlant(cfg.sensors.ids, lambda: valve.position, cfg.valve.full_stroke_pulses)
+        source = SimulatedPlant(cfg.sensors.ids, lambda: max(0, valve.position), valve.max_position)
     else:
         source = DS18B20Source(cfg.sensors)
 

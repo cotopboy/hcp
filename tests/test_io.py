@@ -69,20 +69,23 @@ class ValveTest(unittest.TestCase):
         self.saved = []
         cfg = ValveConfig(pulse_seconds=0, direction_change_pause_seconds=0)
         self.relay = FakeRelay()
-        return Valve(self.relay, cfg, position, calibrated, persist=lambda p, c: self.saved.append((p, c)))
+        return Valve(self.relay, cfg, position, calibrated, 25,
+                     persist=lambda p, c, o: self.saved.append((p, c)))
 
     def test_clamps_to_stroke(self):
         v = self.make()
-        v.move_to(-5)
-        self.assertEqual(v.position, 0)
+        v.move_to(-500)
+        self.assertEqual((v.absolute, v.position), (0, -25))
         v.move_to(1000)
-        self.assertEqual(v.position, 120)
+        self.assertEqual((v.absolute, v.position), (120, 95))
+        v.move_to(0)
+        self.assertEqual(v.absolute, 25)
         self.assertEqual(self.relay.active, None)
 
     def test_close_fully_recalibrates(self):
         v = self.make(position=50, calibrated=False)
         v.close_fully()
-        self.assertEqual((v.position, v.calibrated), (0, True))
+        self.assertEqual((v.absolute, v.position, v.calibrated), (0, -25, True))
         self.assertEqual(self.relay.history, ["down", "off"])
         self.assertEqual(self.saved[-1], (0, True))
 
@@ -90,7 +93,7 @@ class ValveTest(unittest.TestCase):
         stop = threading.Event()
         cfg = ValveConfig(pulse_seconds=0, direction_change_pause_seconds=0)
         relay = FakeRelay()
-        v = Valve(relay, cfg, 10, True, persist=lambda p, c: None, stop_event=stop)
+        v = Valve(relay, cfg, 10, True, 0, persist=lambda p, c, o: None, stop_event=stop)
         stop.set()
         v.step(5)
         self.assertEqual(v.position, 10)
@@ -176,8 +179,13 @@ class ApiTest(unittest.TestCase):
         self.assertEqual(self.call("PUT", "/api/target", {"temperature": 55})[1]["target_temperature"], 55)
         self.assertEqual(self.call("PUT", "/api/mode", {"mode": "manual"})[1]["mode"], "manual")
         status, body = self.call("POST", "/api/valve/move", {"steps": 3})
-        self.assertEqual((status, body["valve"]["manual_target"]), (202, 43))
+        self.assertEqual((status, body["valve"]["manual_target"]), (202, 18))
         self.assertEqual(self.call("POST", "/api/valve/calibrate", {})[0], 202)
+        self.assertEqual(self.call("POST", "/api/valve/zero/jog", {"steps": 1})[0], 409)
+        status, body = self.call("POST", "/api/valve/zero/start", {})
+        self.assertEqual((status, body["phase"]), (202, "zero_calibration"))
+        self.assertEqual(self.call("POST", "/api/valve/zero/set", {})[0], 409)  # still closing
+        self.assertEqual(self.call("POST", "/api/valve/zero/cancel", {})[0], 202)
         self.assertEqual(self.call("GET", "/api/history?hours=1")[0], 200)
         self.assertEqual(self.call("GET", "/api/events")[0], 200)
 

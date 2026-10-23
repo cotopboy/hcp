@@ -1,4 +1,4 @@
-"""Persistent runtime state (mode, target temperature, valve position).
+"""Persistent runtime state (mode, target temperature, valve position, night saver).
 
 Stored as JSON and written atomically (temp file + fsync + rename) so a power
 cut never leaves a half-written file.  On first start the files of the old
@@ -25,8 +25,10 @@ MODES = (MODE_OFF, MODE_AUTO, MODE_MANUAL)
 class State:
     mode: str = MODE_AUTO
     target_temperature: int = 50
-    valve_position: int = 0
+    valve_position: int = 0        # pulses above the end stop (absolute)
     valve_calibrated: bool = False
+    valve_zero_offset: int = -1    # pulses from the end stop to flow start; -1 = not measured yet
+    night_saver: bool = False      # heating off during the night window (config night_saver)
 
 
 class StateStore:

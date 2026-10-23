@@ -66,6 +66,31 @@ class MonitorTest(unittest.TestCase):
         events = self.feed(mainInlet=70, mainReturn=68, waterInlet=66)
         self.assertEqual(events, [mon.NO_CONSUMPTION_START, mon.WATER_TANK_END])
 
+    def _start_water_tank(self):
+        for w in (61, 62, 63, 64, 65):
+            self.feed(mainInlet=75, mainReturn=60, waterInlet=w)
+        self.assertTrue(self.m.water_tank)
+
+    def test_water_tank_ends_when_tank_is_hot(self):
+        self._start_water_tank()
+        self.assertEqual(self.feed(mainInlet=75, mainReturn=72, waterInlet=66), [])  # too soon
+        self.now += 5 * 60
+        self.assertEqual(self.feed(mainInlet=75, mainReturn=72, waterInlet=66), [mon.WATER_TANK_END])
+
+    def test_water_tank_ends_when_water_inlet_falls(self):
+        self._start_water_tank()
+        self.now += 5 * 60
+        for w in (66, 65.5, 65, 64.5):
+            self.assertEqual(self.feed(mainInlet=75, mainReturn=60, waterInlet=w), [])
+        self.assertEqual(self.feed(mainInlet=75, mainReturn=60, waterInlet=63.9), [mon.WATER_TANK_END])
+
+    def test_small_water_inlet_wobble_keeps_water_tank(self):
+        self._start_water_tank()
+        self.now += 5 * 60
+        for w in (66, 65.9, 65.8, 65.7, 65.6, 65.7):
+            self.assertEqual(self.feed(mainInlet=75, mainReturn=60, waterInlet=w), [])
+        self.assertTrue(self.m.water_tank)
+
     def test_missing_main_sensors_skip_checks(self):
         self.assertEqual(self.feed(mainInlet=None, mainReturn=None), [])
 

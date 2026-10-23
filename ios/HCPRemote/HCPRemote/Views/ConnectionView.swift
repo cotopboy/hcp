@@ -22,15 +22,19 @@ struct ConnectionView: View {
                         Button {
                             Task { await use(service) }
                         } label: {
-                            Label(service.name, systemImage: "thermometer.medium")
+                            HStack(spacing: 10) {
+                                PulseDot(color: Theme.ok)
+                                Label(service.name, systemImage: "thermometer.medium")
+                            }
                         }
                     }
                     if let error = discovery.error {
-                        Text(error).font(.caption).foregroundStyle(.orange)
+                        Text(error).font(.caption).foregroundStyle(Theme.warning)
                     }
                 } header: {
                     Text("自动发现")
                 }
+                .listRowBackground(Theme.row)
 
                 Section {
                     TextField("例如 192.168.178.34:8080", text: $address)
@@ -46,16 +50,19 @@ struct ConnectionView: View {
                 } footer: {
                     Text("端口默认 8080。当前：\(store.baseURL?.absoluteString ?? "未设置")")
                 }
+                .listRowBackground(Theme.row)
 
                 if checking || message != nil {
                     Section {
                         if checking {
                             HStack { ProgressView(); Text("正在测试连接…") }
                         }
-                        if let message { Text(message).foregroundStyle(.red) }
+                        if let message { Text(message).foregroundStyle(Theme.danger) }
                     }
+                    .listRowBackground(Theme.row)
                 }
             }
+            .techList()
             .navigationTitle("连接控制器")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

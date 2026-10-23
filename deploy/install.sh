@@ -42,7 +42,7 @@ if [[ ! -f "$DIR/config.json" ]]; then
   echo "   created config.json from the example — check the sensor IDs!"
 fi
 mkdir -p "$DIR/data"
-PORT=$(cd "$DIR" && python3 -c 'from hcp.config import load_config; print(load_config().http.port)')
+PORT=$(cd "$DIR" && python3 -B -c 'from hcp.config import load_config; print(load_config().http.port)')
 chown -R "$RUN_USER": "$DIR/data"
 
 if pgrep -f hcpmain.py >/dev/null; then
