@@ -1,0 +1,38 @@
+{
+  "_comment": "Copy to config.json and adjust. Every key is optional; defaults are in hcp/config.py. See docs/REBUILD.md.",
+  "http": {
+    "port": 8080
+  },
+  "sensors": {
+    "_comment": "DS18B20 IDs from: ls /sys/bus/w1/devices/",
+    "ids": {
+      "mainInlet": "28-3ce1d458c862",
+      "mainReturn": "28-3ce1e380b738",
+      "heatingInlet": "28-3ce1e380d089",
+      "heatingReturn": "28-3ce1e3802805",
+      "waterInlet": "28-3ce1e380cd60"
+    }
+  },
+  "relay": {
+    "i2c_bus": 1,
+    "address": 16,
+    "register_up": 1,
+    "register_down": 2
+  },
+  "valve": {
+    "_comment": "Positions in 0.5 s relay pulses, 0 = fully closed.",
+    "full_stroke_pulses": 120,
+    "ready_position": 34,
+    "auto_min": 35,
+    "auto_max": 66,
+    "reduced_position": 25
+  },
+  "control": {
+    "default_target": 50,
+    "target_min": 30,
+    "target_max": 75
+  },
+  "mqtt": {
+    "enabled": false
+  }
+}

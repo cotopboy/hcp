@@ -1,0 +1,20 @@
+[Unit]
+Description=HCP heating valve controller
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# install.sh replaces @USER@ and @DIR@
+User=@USER@
+SupplementaryGroups=i2c gpio
+WorkingDirectory=@DIR@
+ExecStart=/usr/bin/python3 -m hcp
+Restart=always
+RestartSec=10
+# SIGTERM lets the controller switch both relays off before exiting.
+KillSignal=SIGTERM
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target
