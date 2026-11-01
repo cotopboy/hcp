@@ -58,6 +58,14 @@ struct DashboardView: View {
                         .frame(maxWidth: .infinity)
                         .techCard()
                     }
+                    // Readings live on the phone, so this works without the controller.
+                    NavigationLink {
+                        HeatMeterView()
+                    } label: {
+                        LinkRow(title: "暖气表读数", icon: "gauge.with.dots.needle.33percent", tint: Theme.heat)
+                    }
+                    .buttonStyle(.plain)
+                    .techCard(padding: 12)
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 24)
@@ -257,4 +265,5 @@ private struct AlarmRow: View {
 
 #Preview {
     DashboardView().environment(ControllerStore())
+        .modelContainer(for: HeatMeterReading.self, inMemory: true)
 }

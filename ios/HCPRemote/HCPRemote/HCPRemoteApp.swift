@@ -1,3 +1,4 @@
+import SwiftData
 import SwiftUI
 
 @main
@@ -11,5 +12,6 @@ struct HCPRemoteApp: App {
                 .preferredColorScheme(.dark)
                 .tint(Theme.accent)
         }
+        .modelContainer(for: HeatMeterReading.self)
     }
 }
